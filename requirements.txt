@@ -1,0 +1,25 @@
+# Data ingestion (Extract & Load)
+meltano
+
+# Data warehouse transform layer
+dbt-bigquery
+
+# Data quality
+great_expectations
+
+# Analysis layer
+SQLAlchemy
+sqlalchemy-bigquery
+google-cloud-bigquery
+db-dtypes
+pandas
+duckdb
+polars
+jupyter
+
+# Orchestration
+dagster
+dagster-webserver
+
+# Config / credentials
+python-dotenv
