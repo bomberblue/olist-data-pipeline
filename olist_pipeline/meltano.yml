@@ -1,0 +1,76 @@
+default_environment: dev
+project_id: 01a04e2f-bccb-762c-9e83-413414949a4b
+environments:
+- name: dev
+- name: staging
+- name: prod
+python: python3.11
+plugins:
+  extractors:
+  - name: tap-csv
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
+    config:
+      add_metadata_columns: true
+      files:
+      - entity: raw_orders
+        path: ./data/olist_orders_dataset.csv
+        keys: [order_id]
+        encoding: utf-8-sig
+      - entity: raw_order_items
+        path: ./data/olist_order_items_dataset.csv
+        keys: [order_id, order_item_id]
+        encoding: utf-8-sig
+      - entity: raw_customers
+        path: ./data/olist_customers_dataset.csv
+        keys: [customer_id]
+        encoding: utf-8-sig
+      - entity: raw_sellers
+        path: ./data/olist_sellers_dataset.csv
+        keys: [seller_id]
+        encoding: utf-8-sig
+      - entity: raw_products
+        path: ./data/olist_products_dataset.csv
+        keys: [product_id]
+        encoding: utf-8-sig
+      - entity: raw_category_translation
+        path: ./data/product_category_name_translation.csv
+        keys: [product_category_name]
+        encoding: utf-8-sig
+      - entity: raw_geolocation_dataset
+        path: ./data/olist_geolocation_dataset.csv
+        keys: [geolocation_zip_code_prefix, geolocation_lat, geolocation_lng]
+        encoding: utf-8-sig
+      - entity: raw_order_payments_dataset
+        path: ./data/olist_order_payments_dataset.csv
+        keys: [order_id, payment_sequential]
+        encoding: utf-8-sig
+      - entity: raw_order_reviews_dataset
+        path: ./data/olist_order_reviews_dataset.csv
+        keys: [review_id]
+        encoding: utf-8-sig
+
+  - name: tap-rest-api-msdk
+    variant: widen
+    pip_url: tap-rest-api-msdk setuptools<82
+    config:
+      api_url: https://brasilapi.com.br/api
+      streams:
+        - name: raw_holidays_2017
+          path: /feriados/v1/2017
+          records_path: $[*]
+          primary_keys: [date]
+        - name: raw_holidays_2018
+          path: /feriados/v1/2018
+          records_path: $[*]
+          primary_keys: [date]
+  loaders:
+  - name: target-bigquery
+    variant: z3z1ma
+    pip_url: git+https://github.com/z3z1ma/target-bigquery.git
+    config:
+      project: olist-data-pipeline-507001
+      dataset: olist_staging
+      location: US
+      denormalized: true
+      threads: 1

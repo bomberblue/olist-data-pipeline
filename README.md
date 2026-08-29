@@ -63,3 +63,25 @@ cp .env.example .env
 ### 4. Data
 
 Download the 9 Olist CSVs from Kaggle into `data/raw/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
+
+
+### 5. GCP authentication (run in the terminal)
+run "gcloud auth application-default login" and go into the http and authenticate.
+
+
+### 6. Meltano setup / Tap & Target setup for CSV and REST API (run in the terminal)
+- run "pip install meltano"                            #install meltano.
+- run "meltano init olist_pipeline"			           #create olist_pipeline folder for meltano						
+- run "cd olist_pipeline"                              #set the path to the newly created folder
+
+  ###  Tap and Target for CSV (run in the terminal)
+- run "meltano add tap-csv"		                       #Downloads the open-source Singer tap designed specifically to read flat CSV files from your local directory		
+- run "meltano add target-bigquery --variant=z3z1ma"   #Installs the Singer target responsible for taking the extracted records and securely loading them into your Google BigQuery data warehouse.
+- add the "config" and "loader" informtion in the yml file. See screenshot "CSV_yml.png" and "Bigquery_loader_yml.png" under assets folder.
+- run "meltano run tap-csv target-bigquery"            #run every single time when you want to create the tables in big query
+
+  ###  Tap and Target for REST API (run in the terminal)
+- run "meltano add tap-rest-api-msdk"                  #adding a brand-new plugin to your project so Meltano registers it in your meltano.yml file
+- run "meltano install extractor tap-rest-api-msdk"    #build the isolated virtual environment and download the required packages.
+- add the "config" informtion in the yml file. See screenshot "Rest_API_yml" under assets folder.
+- run "meltano run tap-rest-api-msdk target-bigquery"  #run every single time you actually want to execute the pipeline and load data into BigQuery.
