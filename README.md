@@ -43,12 +43,14 @@ The whole pipeline is orchestrated by Dagster.
 ### 2. Local environment (everyone)
 
 ```bash
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
+conda create -n olist-pipeline python=3.11 -y
+conda activate olist-pipeline
 pip install -r requirements.txt
 ```
 
-You do not need every package in `requirements.txt` installed for your own work. At minimum, everyone needs Python and `dbt-bigquery`.
+Note: conda is used here only to create and manage the isolated Python environment. The packages themselves (Meltano, dbt, Great Expectations, Dagster) are installed via pip inside that environment rather than via conda install, since these tools are pip-first and not reliably up to date on conda-forge. requirements.txt remains the single source of truth for package versions.
+
+You do not need every package in requirements.txt installed for your own work — see the "Who needs this" breakdown in the proposal document's Setup and Prerequisites section. At minimum, everyone needs Python and dbt-bigquery.
 
 ### 3. Credentials
 
