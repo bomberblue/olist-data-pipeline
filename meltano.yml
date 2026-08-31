@@ -1,0 +1,20 @@
+default_environment: dev
+project_id: 01a05933-5720-7483-b3d9-6ce7adc3af83
+environments:
+- name: dev
+- name: staging
+- name: prod
+plugins:
+  extractors:
+  - name: tap-csv
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
+    config:
+      csv_files_definition: extract/olist_files.json
+  loaders:
+  - name: target-bigquery
+    variant: z3z1ma
+    pip_url: git+https://github.com/z3z1ma/target-bigquery.git
+    config:
+      project: diesel-bee-506612-g3
+      dataset: olist_raw

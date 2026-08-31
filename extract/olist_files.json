@@ -1,0 +1,33 @@
+[
+  {
+    "entity": "orders",
+    "path": "data/raw/olist/olist_orders_dataset.csv",
+    "keys": ["order_id"]
+  },
+  {
+    "entity": "order_payments",
+    "path": "data/raw/olist/olist_order_payments_dataset.csv",
+    "keys": ["order_id"]
+  },
+  {
+    "entity": "order_reviews",
+    "path": "data/raw/olist/olist_order_reviews_dataset.csv",
+    "keys": ["review_id"]
+  },
+  {
+    "entity": "products",
+    "path": "data/raw/olist/olist_products_dataset.csv",
+    "keys": ["product_id"]
+  },
+  {
+    "entity": "sellers",
+    "path": "data/raw/olist/olist_sellers_dataset.csv",
+    "keys": ["seller_id"]
+  },
+  {
+    "entity": "product_category_translation",
+    "path": "data/raw/olist/product_category_name_translation.csv",
+    "keys": ["product_category_name"]
+  }
+]
+
