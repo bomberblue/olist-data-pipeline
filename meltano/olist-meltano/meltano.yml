@@ -1,0 +1,52 @@
+default_environment: dev
+project_id: 01a05879-edf6-79e7-8a25-a112a9b758f3
+environments:
+- name: dev
+- name: staging
+- name: prod
+plugins:
+  extractors:
+  - name: tap-csv
+    variant: meltanolabs
+    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
+    config:
+      files:
+      - entity: orders
+        path: ../../data/raw/olist_orders_dataset.csv
+        keys: [order_id]
+      - entity: order_items
+        path: ../../data/raw/olist_order_items_dataset.csv
+        keys: [order_id, order_item_id]
+      - entity: order_payments
+        path: ../../data/raw/olist_order_payments_dataset.csv
+        keys: [order_id, payment_sequential]
+      - entity: order_reviews
+        path: ../../data/raw/olist_order_reviews_dataset.csv
+        keys: [review_id]
+      - entity: customers
+        path: ../../data/raw/olist_customers_dataset.csv
+        keys: [customer_id]
+      - entity: products
+        path: ../../data/raw/olist_products_dataset.csv
+        keys: [product_id]
+      - entity: sellers
+        path: ../../data/raw/olist_sellers_dataset.csv
+        keys: [seller_id]
+      - entity: geolocation
+        path: ../../data/raw/olist_geolocation_dataset.csv
+        keys: []
+      - entity: product_category_name_translation
+        path: ../../data/raw/product_category_name_translation.csv
+        keys: [product_category_name]
+        encoding: utf-8-sig
+  loaders:
+  - name: target-bigquery
+    variant: z3z1ma
+    pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
+    config:
+      dataset: raw
+      project: dataengineering-505517
+      method: batch_job
+      denormalized: true
+      flattening_enabled: true
+      flattening_max_depth: 1
