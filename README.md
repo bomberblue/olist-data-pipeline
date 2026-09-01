@@ -60,28 +60,132 @@ Copy `.env.example` to `.env` and fill in your BigQuery service account or OAuth
 cp .env.example .env
 ```
 
+Update the GCP ID "olist-data-pipeline-507001" under .env
+
 ### 4. Data
 
 Download the 9 Olist CSVs from Kaggle into `data/raw/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
 
 
-### 5. GCP authentication (run in the terminal)
-run "gcloud auth application-default login" and go into the http and authenticate.
+### 5. GCP authentication
+
+Run the following command in the terminal:
+
+- gcloud auth application-default login
+
+Follow the link provided in the terminal and authenticate with your Google account.
 
 
-### 6. Meltano setup / Tap & Target setup for CSV and REST API (run in the terminal)
-- run "pip install meltano"                            #install meltano.
-- run "meltano init olist_pipeline"			           #create olist_pipeline folder for meltano						
-- run "cd olist_pipeline"                              #set the path to the newly created folder
+### 6. Meltano setup / Tap & Target setup for CSV and REST API
 
-  ###  Tap and Target for CSV (run in the terminal)
-- run "meltano add tap-csv"		                       #Downloads the open-source Singer tap designed specifically to read flat CSV files from your local directory		
-- run "meltano add target-bigquery --variant=z3z1ma"   #Installs the Singer target responsible for taking the extracted records and securely loading them into your Google BigQuery data warehouse.
-- add the "config" and "loader" informtion in the yml file. See screenshot "CSV_yml.png" and "Bigquery_loader_yml.png" under assets folder.
-- run "meltano run tap-csv target-bigquery"            #run every single time when you want to create the tables in big query
+Run the following commands in the terminal:
 
-  ###  Tap and Target for REST API (run in the terminal)
-- run "meltano add tap-rest-api-msdk"                  #adding a brand-new plugin to your project so Meltano registers it in your meltano.yml file
-- run "meltano install extractor tap-rest-api-msdk"    #build the isolated virtual environment and download the required packages.
-- add the "config" informtion in the yml file. See screenshot "Rest_API_yml" under assets folder.
-- run "meltano run tap-rest-api-msdk target-bigquery"  #run every single time you actually want to execute the pipeline and load data into BigQuery.
+ 
+- pip install meltano                                          # Install Meltano.
+
+- meltano init meltano_ingestion                               # Create the meltano_ingestion project folder.
+
+- cd meltano_ingestion                                         # Navigate to the meltano_ingestion project folder.
+
+ 
+
+### Tap and Target for CSV
+
+Run the following commands in the terminal:
+
+
+- meltano add tap-csv --variant meltanolabs                    # Add the MeltanoLabs implementation of the CSV tap for reading CSV files from the local directory.
+
+- meltano add target-bigquery --variant=z3z1ma                 # Install the Singer target for loading extracted records into Google BigQuery.
+
+Note: 
+Add below data under meltano.yml file before running the target code.
+1) Add "setuptools<80" in pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
+
+2) Add below config data under pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
+
+   config:
+      project: olist-data-pipeline-507001
+      dataset: olist_staging
+      location: US
+      denormalized: true
+      threads: 1
+
+3) Add below config data under pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
+
+    config:
+      add_metadata_columns: true
+      files:
+      - entity: raw_orders
+        path: ../data/olist_orders_dataset.csv
+        keys: [order_id]
+        encoding: utf-8-sig
+      - entity: raw_order_items
+        path: ../data/olist_order_items_dataset.csv
+        keys: [order_id, order_item_id]
+        encoding: utf-8-sig
+      - entity: raw_customers
+        path: ../data/olist_customers_dataset.csv
+        keys: [customer_id]
+        encoding: utf-8-sig
+      - entity: raw_sellers
+        path: ../data/olist_sellers_dataset.csv
+        keys: [seller_id]
+        encoding: utf-8-sig
+      - entity: raw_products
+        path: ../data/olist_products_dataset.csv
+        keys: [product_id]
+        encoding: utf-8-sig
+      - entity: raw_category_translation
+        path: ../data/product_category_name_translation.csv
+        keys: [product_category_name]
+        encoding: utf-8-sig
+      - entity: raw_geolocation_dataset
+        path: ../data/olist_geolocation_dataset.csv
+        keys: [geolocation_zip_code_prefix, geolocation_lat, geolocation_lng]
+        encoding: utf-8-sig
+      - entity: raw_order_payments_dataset
+        path: ../data/olist_order_payments_dataset.csv
+        keys: [order_id, payment_sequential]
+        encoding: utf-8-sig
+      - entity: raw_order_reviews_dataset
+        path: ../data/olist_order_reviews_dataset.csv
+        keys: [review_id]
+        encoding: utf-8-sig
+
+
+
+
+- meltano run tap-csv target-bigquery                         # to extract the CSV data and load it into BigQuery
+
+
+### Tap and Target for REST API
+
+Run the following commands in the terminal:
+
+ 
+- meltano add tap-rest-api-msdk                                        # Add the REST API tap to the Meltano project.
+
+- meltano install extractor tap-rest-api-msdk                          # Install the extractor and its required packages.
+
+Note: 
+Add below data under meltano.yml file before running the target code.
+1) Add "setuptools<80" in pip_url: tap-rest-api-msdk setuptools<80
+2) Add below config data under pip_url: tap-rest-api-msdk setuptools<80
+
+   config:
+      api_url: https://brasilapi.com.br/api
+      streams:
+      - name: raw_holidays_2017
+        path: /feriados/v1/2017
+        records_path: $[*]
+        primary_keys: [date]
+      - name: raw_holidays_2018
+        path: /feriados/v1/2018
+        records_path: $[*]
+        primary_keys: [date]
+
+
+- meltano run tap-rest-api-msdk target-bigquery                        # to extract data from the REST API and load it into BigQuery
+
+ 
