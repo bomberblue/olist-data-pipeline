@@ -7,5 +7,6 @@ data/raw/*
 dbt_packages/
 target/
 logs/
-data
+data/*
+!data/raw/
  
