@@ -1,12 +1,10 @@
 .env
 __pycache__/
 *.pyc
-data/raw/*
-!data/raw/.gitkeep
 .ipynb_checkpoints/
 dbt_packages/
 target/
 logs/
 data/*
-!data/raw/
+!data/.gitkeep
  
