@@ -78,9 +78,7 @@ Follow the link provided in the terminal and authenticate with your Google accou
 
 ### 6. dbt profile setup
 
-`profiles.yml` holds the BigQuery connection details for dbt. Lives at `~/.dbt/profiles.yml`, not committed to the repo. Each person sets up their own.
-
-Add a block matching the `profile:` name in `dbt_transform/dbt_project.yml`:
+`profiles.yml` holds the BigQuery connection details for dbt. Create it inside `dbt_transform/profiles.yml`, project-local rather than the global `~/.dbt/profiles.yml`, so the project stays self-contained. It's git-ignored, each person creates their own.
 
 ```yaml
 dbt_transform:
@@ -97,7 +95,7 @@ dbt_transform:
 
 Target is `prod`, not `dev`. `dbt_transform` uses `generate_schema_name_for_env` so marts land in `olist_mart` instead of `olist_staging`, and that only kicks in when the target is named `prod`. No real dev/prod split here, one shared BigQuery project for everyone, so `prod` is just the label the macro checks for.
 
-Already have a `profiles.yml` from another project? Add this as a second top-level block, don't replace the file.
+Since the profile isn't in the default `~/.dbt/` location, point dbt at it either with `--profiles-dir .` on every command, or by setting `DBT_PROFILES_DIR=$(pwd)` once per terminal session, run from inside `dbt_transform/`.
 
 ### 7. Meltano setup / Tap & Target setup for CSV and REST API
 
