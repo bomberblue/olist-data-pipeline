@@ -82,8 +82,17 @@ Follow the link provided in the terminal and authenticate with your Google accou
 
 ```yaml
 dbt_transform:
-  target: prod
+  target: dev
+
   outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: olist-data-pipeline-507001
+      dataset: dbt_<your_name>
+      location: US
+      threads: 4
+
     prod:
       type: bigquery
       method: oauth
@@ -95,7 +104,6 @@ dbt_transform:
 
 Target is `prod`, not `dev`. `dbt_transform` uses `generate_schema_name_for_env` so marts land in `olist_marts` instead of `olist_staging`, and that only kicks in when the target is named `prod`. No real dev/prod split here, one shared BigQuery project for everyone, so `prod` is just the label the macro checks for.
 
-Since the profile isn't in the default `~/.dbt/` location, point dbt at it either with `--profiles-dir .` on every command, or by setting `DBT_PROFILES_DIR=$(pwd)` once per terminal session, run from inside `dbt_transform/`.
 
 ### 7. Meltano setup / Tap & Target setup for CSV and REST API
 
