@@ -93,7 +93,7 @@ dbt_transform:
       threads: 4
 ```
 
-Target is `prod`, not `dev`. `dbt_transform` uses `generate_schema_name_for_env` so marts land in `olist_mart` instead of `olist_staging`, and that only kicks in when the target is named `prod`. No real dev/prod split here, one shared BigQuery project for everyone, so `prod` is just the label the macro checks for.
+Target is `prod`, not `dev`. `dbt_transform` uses `generate_schema_name_for_env` so marts land in `olist_marts` instead of `olist_staging`, and that only kicks in when the target is named `prod`. No real dev/prod split here, one shared BigQuery project for everyone, so `prod` is just the label the macro checks for.
 
 Since the profile isn't in the default `~/.dbt/` location, point dbt at it either with `--profiles-dir .` on every command, or by setting `DBT_PROFILES_DIR=$(pwd)` once per terminal session, run from inside `dbt_transform/`.
 
@@ -127,7 +127,7 @@ Add below data under meltano.yml file before running the target code.
 
    config:
       project: olist-data-pipeline-507001
-      dataset: olist_staging
+      dataset: olist_raw
       location: US
       denormalized: true
       threads: 1
