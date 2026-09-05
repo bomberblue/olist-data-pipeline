@@ -113,122 +113,113 @@ dbt_transform:
       threads: 4
 ```
 
-### 7. Install the existing Meltano project
+### 7. Meltano setup / Tap & Target setup for CSV and REST API
 
-After cloning the repository and completing steps 1–6, activate the Python environment created in step 2. From the repository root, install the plugins already defined in the project:
+After cloning the repository, install the plugins from the existing project configuration:
 
-```bash
-conda activate olist-pipeline
-cd meltano_ingestion
-meltano install
-```
+- cd meltano_ingestion
 
-`meltano install` installs `tap-csv`, `tap-rest-api-msdk`, and `target-bigquery` from the committed project configuration. The project and plugin definitions are already included in the repository; project initialization and plugin addition are not part of clone setup. See the [Meltano CLI documentation](https://docs.meltano.com/reference/command-line-interface#install).
+- meltano install
 
-Keep stream definitions, file paths, plugin dependencies, and loader settings in [`meltano_ingestion/meltano.yml`](meltano_ingestion/meltano.yml). This is the source of truth for ingestion configuration.
+The project initialization and `meltano add` commands below document how the project was originally set up. They are only needed when rebuilding the Meltano project from scratch.
 
-### 8. Tap and target for CSV
+- pip install meltano                                          # Install Meltano.
 
-The project uses the MeltanoLabs variant of `tap-csv` to read local CSV files and the z3z1ma variant of `target-bigquery` to load them into BigQuery.
+- meltano init meltano_ingestion                               # Create the meltano_ingestion project folder.
 
-The following commands were used to add these plugins when the project was created. They are only needed if the Meltano project is rebuilt from scratch; after cloning, use `meltano install` from step 7.
+- cd meltano_ingestion                                         # Navigate to the meltano_ingestion project folder.
 
-```bash
-meltano add tap-csv --variant meltanolabs
-meltano add target-bigquery --variant=z3z1ma
-```
 
-The target keeps `setuptools<80` in its `pip_url`. Its configuration in `meltano.yml` is:
+### Tap and Target for CSV
 
-```yaml
-config:
-  project: ${GOOGLE_CLOUD_PROJECT}
-  dataset: ${BIGQUERY_DATASET}
-  location: US
-  denormalized: true
-  threads: 1
-```
+Run the following commands when adding the CSV tap and BigQuery target to a new Meltano project:
 
-The CSV tap configuration is:
+- meltano add tap-csv --variant meltanolabs                    # Add the MeltanoLabs implementation of the CSV tap for reading CSV files from the local directory.
 
-```yaml
-config:
-  add_metadata_columns: true
-  files:
-    - entity: raw_orders
-      path: ../data/olist_orders_dataset.csv
-      keys: [order_id]
-      encoding: utf-8-sig
-    - entity: raw_order_items
-      path: ../data/olist_order_items_dataset.csv
-      keys: [order_id, order_item_id]
-      encoding: utf-8-sig
-    - entity: raw_customers
-      path: ../data/olist_customers_dataset.csv
-      keys: [customer_id]
-      encoding: utf-8-sig
-    - entity: raw_sellers
-      path: ../data/olist_sellers_dataset.csv
-      keys: [seller_id]
-      encoding: utf-8-sig
-    - entity: raw_products
-      path: ../data/olist_products_dataset.csv
-      keys: [product_id]
-      encoding: utf-8-sig
-    - entity: raw_category_translation
-      path: ../data/product_category_name_translation.csv
-      keys: [product_category_name]
-      encoding: utf-8-sig
-    - entity: raw_geolocation_dataset
-      path: ../data/olist_geolocation_dataset.csv
-      keys: []
-      encoding: utf-8-sig
-    - entity: raw_order_payments_dataset
-      path: ../data/olist_order_payments_dataset.csv
-      keys: [order_id, payment_sequential]
-      encoding: utf-8-sig
-    - entity: raw_order_reviews_dataset
-      path: ../data/olist_order_reviews_dataset.csv
-      keys: [review_id, order_id]
-      encoding: utf-8-sig
-```
+- meltano add target-bigquery --variant=z3z1ma                 # Install the Singer target for loading extracted records into Google BigQuery.
 
-Run the CSV ingestion command from `meltano_ingestion/`:
+Note:
+The target keeps "setuptools<80" in `pip_url`: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
 
-```bash
-meltano --env-file ../.env run tap-csv target-bigquery
-```
+The target configuration in `meltano.yml` is:
 
-The CSV paths point to `../data/`, so all nine files must be present in the repository's `data/` directory.
+    config:
+      project: ${GOOGLE_CLOUD_PROJECT}
+      dataset: ${BIGQUERY_DATASET}
+      location: US
+      denormalized: true
+      threads: 1
 
-### 9. Tap and target for REST API
+The CSV tap configuration in `meltano.yml` is:
 
-The project uses `tap-rest-api-msdk` to extract Brazilian holidays. This command was used when the plugin was first added and is only needed if the project is rebuilt from scratch:
+    config:
+      add_metadata_columns: true
+      files:
+      - entity: raw_orders
+        path: ../data/olist_orders_dataset.csv
+        keys: [order_id]
+        encoding: utf-8-sig
+      - entity: raw_order_items
+        path: ../data/olist_order_items_dataset.csv
+        keys: [order_id, order_item_id]
+        encoding: utf-8-sig
+      - entity: raw_customers
+        path: ../data/olist_customers_dataset.csv
+        keys: [customer_id]
+        encoding: utf-8-sig
+      - entity: raw_sellers
+        path: ../data/olist_sellers_dataset.csv
+        keys: [seller_id]
+        encoding: utf-8-sig
+      - entity: raw_products
+        path: ../data/olist_products_dataset.csv
+        keys: [product_id]
+        encoding: utf-8-sig
+      - entity: raw_category_translation
+        path: ../data/product_category_name_translation.csv
+        keys: [product_category_name]
+        encoding: utf-8-sig
+      - entity: raw_geolocation_dataset
+        path: ../data/olist_geolocation_dataset.csv
+        keys: []
+        encoding: utf-8-sig
+      - entity: raw_order_payments_dataset
+        path: ../data/olist_order_payments_dataset.csv
+        keys: [order_id, payment_sequential]
+        encoding: utf-8-sig
+      - entity: raw_order_reviews_dataset
+        path: ../data/olist_order_reviews_dataset.csv
+        keys: [review_id, order_id]
+        encoding: utf-8-sig
 
-```bash
-meltano add tap-rest-api-msdk
-```
 
-The tap keeps `setuptools<80` in its `pip_url`. Its configuration in `meltano.yml` is:
+- meltano --env-file ../.env run tap-csv target-bigquery       # Extract the CSV data and load it into BigQuery.
 
-```yaml
-config:
-  api_url: https://brasilapi.com.br/api
-  streams:
-    - name: raw_holidays_2017
-      path: /feriados/v1/2017
-      records_path: $[*]
-      primary_keys: [date]
-    - name: raw_holidays_2018
-      path: /feriados/v1/2018
-      records_path: $[*]
-      primary_keys: [date]
-```
 
-Run the REST API ingestion command from `meltano_ingestion/`:
+### Tap and Target for REST API
 
-```bash
-meltano --env-file ../.env run tap-rest-api-msdk target-bigquery
-```
+Run the following commands when adding the REST API tap to a new Meltano project:
 
-After each ingestion command succeeds, check the corresponding raw tables in BigQuery and compare the CSV table row counts with the source files.
+- meltano add tap-rest-api-msdk                                # Add the REST API tap to the Meltano project.
+
+- meltano install tap-rest-api-msdk                            # Install the extractor and its required packages.
+
+Note:
+The tap keeps "setuptools<80" in `pip_url`: tap-rest-api-msdk setuptools<80
+
+The REST API configuration in `meltano.yml` is:
+
+    config:
+      api_url: https://brasilapi.com.br/api
+      streams:
+      - name: raw_holidays_2017
+        path: /feriados/v1/2017
+        records_path: $[*]
+        primary_keys: [date]
+      - name: raw_holidays_2018
+        path: /feriados/v1/2018
+        records_path: $[*]
+        primary_keys: [date]
+
+
+- meltano --env-file ../.env run tap-rest-api-msdk target-bigquery  # Extract the REST API data and load it into BigQuery.
