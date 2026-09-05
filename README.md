@@ -125,6 +125,15 @@ dbt_transform:
 ```
 
 
+From the repository root, check the dbt profile and project:
+
+```bash
+cd dbt_transform
+dbt debug --profiles-dir .
+dbt parse --profiles-dir .
+```
+
+
 ### 7. Install the existing Meltano project
 
 After cloning the repository and completing steps 1–6, activate the Python environment created in step 2. From the repository root, install the plugins already defined in the project:
@@ -158,3 +167,5 @@ meltano --env-file ../.env run tap-rest-api-msdk target-bigquery
 ```
 
 The current loader configuration enables `overwrite: true`, so a successful rerun replaces the tables loaded by that run. After each command succeeds, check the corresponding raw tables in BigQuery and compare CSV table row counts with the source files.
+
+The pinned loader's overwrite implementation may fail when replacing partitioned tables because its replacement SQL omits partitioning. This concern was identified from the loader code; it has not been tested against this project in BigQuery. Verify a small load and rerun in an isolated dataset before relying on shared-table refreshes.
