@@ -1,0 +1,175 @@
+version: 2
+
+models:
+
+  - name: stg_customers
+    description: "Cleaned Olist customer records."
+
+    columns:
+
+      - name: customer_id
+        description: "Unique identifier for the customer order account."
+        tests:
+          - not_null
+          - unique  
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+
+      - name: customer_unique_id
+        description: "Identifier representing the unique customer."
+        tests:
+          - not_null
+
+  - name: stg_orders
+    description: "Cleaned Olist order records. Grain: one row per order."
+
+    columns:
+
+      - name: order_id
+        description: "Unique identifier for an order."
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Customer account associated with the order."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+
+      - name: order_status
+        description: "Status of the order."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - DELIVERED
+                - SHIPPED
+                - CANCELED
+                - UNAVAILABLE
+                - INVOICED
+                - PROCESSING
+                - CREATED
+                - APPROVED
+
+
+  - name: stg_order_items
+    description: "Cleaned order item records. Grain: one row per order item."
+
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+
+      - name: order_item_id
+        tests:
+          - not_null
+
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+
+      - name: seller_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_sellers')
+              field: seller_id
+
+      - name: price
+        tests:
+          - not_null
+
+      - name: freight_value
+        tests:
+          - not_null
+
+  - name: stg_order_payments
+
+    description: "Cleaned payment records. Grain: one row per payment record."
+    columns:
+
+      - name: order_id
+        tests:
+          - not_null
+
+      - name: payment_type
+        tests:
+          - not_null
+
+      - name: payment_value
+        tests:
+          - not_null
+
+  - name: stg_order_reviews
+    description: "Cleaned order review records."
+
+    columns:
+      - name: review_id
+        tests:
+          - not_null
+
+      - name: order_id
+        tests:
+          - not_null
+
+      - name: review_score
+        tests:
+          - not_null
+
+
+  - name: stg_products
+    description: "Cleaned product records."
+
+    columns:
+
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+
+  - name: stg_sellers
+    description: "Cleaned seller records."
+
+    columns:
+
+      - name: seller_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_geolocation
+    description: "Olist geolocation records. Multiple rows may exist for a ZIP prefix."
+
+    columns:
+      - name: zip_code
+        tests:
+          - not_null
+
+      - name: latitude
+        tests:
+          - not_null
+
+      - name: longitude
+        tests:
+          - not_null
+
+  - name: stg_category_translation
+    description: "Portuguese to English product category mapping."
+
+    columns:
+
+      - name: product_category_name
+        tests:
+          - not_null
+          - unique
