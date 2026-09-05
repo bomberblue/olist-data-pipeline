@@ -127,55 +127,108 @@ meltano install
 
 Keep stream definitions, file paths, plugin dependencies, and loader settings in [`meltano_ingestion/meltano.yml`](meltano_ingestion/meltano.yml). This is the source of truth for ingestion configuration.
 
-#### Configured CSV tap and BigQuery target
+### 8. Tap and target for CSV
 
-The project uses the MeltanoLabs variant of `tap-csv` to read the local CSV files and the z3z1ma variant of `target-bigquery` to load them into BigQuery. The target keeps the `setuptools<80` compatibility constraint in its `pip_url`.
+The project uses the MeltanoLabs variant of `tap-csv` to read local CSV files and the z3z1ma variant of `target-bigquery` to load them into BigQuery.
 
-The following streams are configured in `meltano.yml`:
+The following commands were used to add these plugins when the project was created. They are only needed if the Meltano project is rebuilt from scratch; after cloning, use `meltano install` from step 7.
 
-| Stream | Source file | Declared key |
-|---|---|---|
-| `raw_orders` | `olist_orders_dataset.csv` | `order_id` |
-| `raw_order_items` | `olist_order_items_dataset.csv` | `order_id`, `order_item_id` |
-| `raw_customers` | `olist_customers_dataset.csv` | `customer_id` |
-| `raw_sellers` | `olist_sellers_dataset.csv` | `seller_id` |
-| `raw_products` | `olist_products_dataset.csv` | `product_id` |
-| `raw_category_translation` | `product_category_name_translation.csv` | `product_category_name` |
-| `raw_geolocation_dataset` | `olist_geolocation_dataset.csv` | No unique source key |
-| `raw_order_payments_dataset` | `olist_order_payments_dataset.csv` | `order_id`, `payment_sequential` |
-| `raw_order_reviews_dataset` | `olist_order_reviews_dataset.csv` | `review_id`, `order_id` |
+```bash
+meltano add tap-csv --variant meltanolabs
+meltano add target-bigquery --variant=z3z1ma
+```
 
-All files use `utf-8-sig` encoding, and the tap adds Meltano source metadata columns. The target project and dataset come from the root `.env`; the remaining target settings, including location and denormalized loading, are in `meltano.yml`.
+The target keeps `setuptools<80` in its `pip_url`. Its configuration in `meltano.yml` is:
 
-#### Configured REST API tap
+```yaml
+config:
+  project: ${GOOGLE_CLOUD_PROJECT}
+  dataset: ${BIGQUERY_DATASET}
+  location: US
+  denormalized: true
+  threads: 1
+```
 
-The `tap-rest-api-msdk` extractor reads Brazilian holidays from `https://brasilapi.com.br/api` and keeps the `setuptools<80` compatibility constraint. Two streams are configured:
+The CSV tap configuration is:
 
-| Stream | API path | Primary key |
-|---|---|---|
-| `raw_holidays_2017` | `/feriados/v1/2017` | `date` |
-| `raw_holidays_2018` | `/feriados/v1/2018` | `date` |
+```yaml
+config:
+  add_metadata_columns: true
+  files:
+    - entity: raw_orders
+      path: ../data/olist_orders_dataset.csv
+      keys: [order_id]
+      encoding: utf-8-sig
+    - entity: raw_order_items
+      path: ../data/olist_order_items_dataset.csv
+      keys: [order_id, order_item_id]
+      encoding: utf-8-sig
+    - entity: raw_customers
+      path: ../data/olist_customers_dataset.csv
+      keys: [customer_id]
+      encoding: utf-8-sig
+    - entity: raw_sellers
+      path: ../data/olist_sellers_dataset.csv
+      keys: [seller_id]
+      encoding: utf-8-sig
+    - entity: raw_products
+      path: ../data/olist_products_dataset.csv
+      keys: [product_id]
+      encoding: utf-8-sig
+    - entity: raw_category_translation
+      path: ../data/product_category_name_translation.csv
+      keys: [product_category_name]
+      encoding: utf-8-sig
+    - entity: raw_geolocation_dataset
+      path: ../data/olist_geolocation_dataset.csv
+      keys: []
+      encoding: utf-8-sig
+    - entity: raw_order_payments_dataset
+      path: ../data/olist_order_payments_dataset.csv
+      keys: [order_id, payment_sequential]
+      encoding: utf-8-sig
+    - entity: raw_order_reviews_dataset
+      path: ../data/olist_order_reviews_dataset.csv
+      keys: [review_id, order_id]
+      encoding: utf-8-sig
+```
 
-Both streams read records from `$[*]` in the API response.
-
-The project was originally created with `meltano init` and the plugins were added with `meltano add`. Those commands are only needed when rebuilding the Meltano project from scratch. After cloning this repository, use `meltano install` as shown above so the committed configuration is preserved. Meltano itself is installed by `pip install -r requirements.txt` in step 2.
-
-### 8. Run ingestion
-
-Run the commands below from `meltano_ingestion/`. Complete Application Default Credentials authentication from step 5 first, and confirm the project and dataset values in the repository's root `.env`. The loader reads those values through the variable references in `meltano.yml`. The `--env-file ../.env` option explicitly loads the root `.env`.
-
-Load the nine local CSVs:
+Run the CSV ingestion command from `meltano_ingestion/`:
 
 ```bash
 meltano --env-file ../.env run tap-csv target-bigquery
 ```
 
-The configured CSV paths point to `../data/`, so all nine files must be present in the repository's `data/` directory.
+The CSV paths point to `../data/`, so all nine files must be present in the repository's `data/` directory.
 
-Load the 2017 and 2018 holidays from BrasilAPI:
+### 9. Tap and target for REST API
+
+The project uses `tap-rest-api-msdk` to extract Brazilian holidays. This command was used when the plugin was first added and is only needed if the project is rebuilt from scratch:
+
+```bash
+meltano add tap-rest-api-msdk
+```
+
+The tap keeps `setuptools<80` in its `pip_url`. Its configuration in `meltano.yml` is:
+
+```yaml
+config:
+  api_url: https://brasilapi.com.br/api
+  streams:
+    - name: raw_holidays_2017
+      path: /feriados/v1/2017
+      records_path: $[*]
+      primary_keys: [date]
+    - name: raw_holidays_2018
+      path: /feriados/v1/2018
+      records_path: $[*]
+      primary_keys: [date]
+```
+
+Run the REST API ingestion command from `meltano_ingestion/`:
 
 ```bash
 meltano --env-file ../.env run tap-rest-api-msdk target-bigquery
 ```
 
-After each command succeeds, check the corresponding raw tables in BigQuery and compare CSV table row counts with the source files.
+After each ingestion command succeeds, check the corresponding raw tables in BigQuery and compare the CSV table row counts with the source files.
