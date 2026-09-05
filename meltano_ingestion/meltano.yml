@@ -39,7 +39,7 @@ plugins:
         encoding: utf-8-sig
       - entity: raw_geolocation_dataset
         path: ../data/olist_geolocation_dataset.csv
-        keys: [geolocation_zip_code_prefix, geolocation_lat, geolocation_lng]
+        keys: []
         encoding: utf-8-sig
       - entity: raw_order_payments_dataset
         path: ../data/olist_order_payments_dataset.csv
@@ -47,7 +47,7 @@ plugins:
         encoding: utf-8-sig
       - entity: raw_order_reviews_dataset
         path: ../data/olist_order_reviews_dataset.csv
-        keys: [review_id]
+        keys: [review_id, order_id]
         encoding: utf-8-sig
 
   - name: tap-rest-api-msdk
@@ -70,8 +70,8 @@ plugins:
     variant: z3z1ma
     pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
     config:
-      project: olist-data-pipeline-507001
-      dataset: olist_raw
+      project: ${GOOGLE_CLOUD_PROJECT}
+      dataset: ${BIGQUERY_DATASET}
       location: US
       denormalized: true
       threads: 1
