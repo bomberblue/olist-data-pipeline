@@ -8,4 +8,5 @@ logs/
 data
 data/*
 !data/.gitkeep
+dbt_transform/profiles.yml
  

@@ -21,10 +21,11 @@ The whole pipeline is orchestrated by Dagster.
 ├── .env.example          # copy to .env and fill in; .env itself is git-ignored
 ├── data/                  # the 9 Olist CSVs (git-ignored, not committed)
 ├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config (owner: A)
-├── dbt/
+├── dbt_transform/
 │   ├── models/
 │   │   ├── staging/        # stg_* models (owner: B)
 │   │   └── marts/          # fact_*, dim_* models (owner: B)
+│   ├── macros/               # e.g. generate_schema_name override for marts dataset
 │   └── tests/               # dbt + Great Expectations suites (owner: C)
 ├── orchestration/
 │   └── dagster/              # Dagster assets and schedule (owner: E)
@@ -75,7 +76,28 @@ Run the following command in the terminal:
 Follow the link provided in the terminal and authenticate with your Google account.
 
 
-### 6. Meltano setup / Tap & Target setup for CSV and REST API
+### 6. dbt profile setup
+
+`profiles.yml` holds the BigQuery connection details for dbt. Create it inside `dbt_transform/profiles.yml`, project-local rather than the global `~/.dbt/profiles.yml`, so the project stays self-contained. It's git-ignored, each person creates their own.
+
+```yaml
+dbt_transform:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: oauth
+      project: olist-data-pipeline-507001
+      dataset: olist_staging
+      location: US
+      threads: 4
+```
+
+Target is `prod`, not `dev`. `dbt_transform` uses `generate_schema_name_for_env` so marts land in `olist_mart` instead of `olist_staging`, and that only kicks in when the target is named `prod`. No real dev/prod split here, one shared BigQuery project for everyone, so `prod` is just the label the macro checks for.
+
+Since the profile isn't in the default `~/.dbt/` location, point dbt at it either with `--profiles-dir .` on every command, or by setting `DBT_PROFILES_DIR=$(pwd)` once per terminal session, run from inside `dbt_transform/`.
+
+### 7. Meltano setup / Tap & Target setup for CSV and REST API
 
 Run the following commands in the terminal:
 
