@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: olist
-    database: "{{ target.project }}"
+    database: olist-data-pipeline-507001
     schema: olist_raw
 
     tables:
