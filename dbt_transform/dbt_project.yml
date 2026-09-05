@@ -35,5 +35,5 @@ models:
       +materialized: view
 
     marts:
-      +schema: olist_mart
+      +schema: olist_marts
       +materialized: table

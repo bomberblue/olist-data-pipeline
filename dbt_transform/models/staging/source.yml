@@ -3,17 +3,17 @@ version: 2
 sources:
   - name: olist
     database: "{{ target.project }}"
-    schema: olist_staging
+    schema: olist_raw
 
     tables:
       - name: raw_customers
       - name: raw_orders
       - name: raw_order_items
-      - name: raw_order_payments_datasets
-      - name: raw_order_reviews_datasets
+      - name: raw_order_payments_dataset
+      - name: raw_order_reviews_dataset
       - name: raw_products
       - name: raw_sellers
-      - name: raw_geolocation_datasets
+      - name: raw_geolocation_dataset
       - name: raw_category_translation
       - name: raw_holidays_2017
       - name: raw_holidays_2018
