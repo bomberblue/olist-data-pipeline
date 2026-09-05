@@ -37,8 +37,10 @@ The whole pipeline is orchestrated by Dagster.
 
 ### 1. Accounts (whole team)
 
-- Google Cloud Platform project with BigQuery enabled — free sandbox tier is sufficient. Each team member needs Editor access.
+- Google Cloud Platform project with BigQuery and billing enabled for the current ingestion configuration. Each team member needs Editor access.
 - This GitHub repository, on a single `main` branch.
+
+The configured BigQuery loader uses the Storage Write API by default. The BigQuery sandbox does not support streaming or DML, so it is not sufficient for this setup. Sandbox use would require a separately validated batch-loading and table-replacement configuration. See [BigQuery sandbox limitations](https://docs.cloud.google.com/bigquery/docs/sandbox#limitations).
 
 ### 2. Local environment (everyone)
 
@@ -48,19 +50,37 @@ conda activate olist-pipeline
 pip install -r requirements.txt
 ```
 
-Note: conda is used here only to create and manage the isolated Python environment. The packages themselves (Meltano, dbt, Great Expectations, Dagster) are installed via pip inside that environment rather than via conda install, since these tools are pip-first and not reliably up to date on conda-forge. requirements.txt remains the single source of truth for package versions.
+Conda creates and manages the isolated Python environment; pip installs the packages listed in `requirements.txt` inside it.
+
+`requirements.txt` pins the direct package versions from the team's existing `olist-pipeline` Python 3.11 environment. Meltano installs its taps and target separately using the pinned `pip_url` entries in `meltano_ingestion/meltano.yml`:
+
+- `tap-csv`: the installed Git commit `1331c4a4f3d2bd7b0757a9a7ea4d27b785c54e04` (version 1.2.0).
+- `target-bigquery`: the installed Git commit `090dad0620711efae4b31031b10b0ea88744aef5` (version 0.7.2).
+- `tap-rest-api-msdk`: release 1.4.2, installed and checked separately in a temporary Python 3.11 environment.
+- The REST tap and BigQuery target also pin `setuptools==79.0.1`, preserving the existing `setuptools<80` compatibility constraint using the version installed with the target.
+
+Validation covered dependency resolution of `requirements.txt`, imports and dependency checks in the existing main environment, and dependency checks and CLI version commands for all three plugins. These checks do not establish successful end-to-end BigQuery ingestion. Transitive dependencies are not fully locked and can still vary between installations.
+
+When upgrading dependencies, update the relevant pins in `requirements.txt` or `meltano_ingestion/meltano.yml`, repeat the compatibility checks, and validate ingestion before sharing the change. The files under `meltano_ingestion/plugins/` store Meltano plugin definitions; the project's explicit `pip_url` entries select the plugin versions used here.
 
 You do not need every package in requirements.txt installed for your own work — see the "Who needs this" breakdown in the proposal document's Setup and Prerequisites section. At minimum, everyone needs Python and dbt-bigquery.
 
-### 3. Credentials
+### 3. Local destination settings
 
-Copy `.env.example` to `.env` and fill in your BigQuery service account or OAuth credential. `.env` is git-ignored — never commit it.
+From the repository root, copy `.env.example` to `.env` if you do not already have a local `.env`. This file stores the BigQuery destination settings and is git-ignored — never commit it.
 
 ```bash
 cp .env.example .env
 ```
 
-Update the GCP ID "olist-data-pipeline-507001" under .env
+Set these values in the root `.env`, changing the project or dataset if needed:
+
+```dotenv
+GOOGLE_CLOUD_PROJECT=olist-data-pipeline-507001
+BIGQUERY_DATASET=olist_raw
+```
+
+The loader in `meltano_ingestion/meltano.yml` references these variables. The ingestion commands in step 8 explicitly load this root `.env`; a separate `.env` inside `meltano_ingestion/` is unnecessary. Google authentication is configured separately through Application Default Credentials in step 5. dbt continues to use its own `profiles.yml` from step 6.
 
 ### 4. Data
 
@@ -105,116 +125,36 @@ dbt_transform:
 ```
 
 
-### 7. Meltano setup / Tap & Target setup for CSV and REST API
+### 7. Install the existing Meltano project
 
-Run the following commands in the terminal:
+After cloning the repository and completing steps 1–6, activate the Python environment created in step 2. From the repository root, install the plugins already defined in the project:
 
- 
-- pip install meltano                                          # Install Meltano.
+```bash
+conda activate olist-pipeline
+cd meltano_ingestion
+meltano install
+```
 
-- meltano init meltano_ingestion                               # Create the meltano_ingestion project folder.
+`meltano install` installs `tap-csv`, `tap-rest-api-msdk`, and `target-bigquery` from the committed project configuration. The project and plugin definitions are already included in the repository; project initialization and plugin addition are not part of clone setup. See the [Meltano CLI documentation](https://docs.meltano.com/reference/command-line-interface#install).
 
-- cd meltano_ingestion                                         # Navigate to the meltano_ingestion project folder.
+Keep stream definitions, file paths, plugin dependencies, and loader settings in [`meltano_ingestion/meltano.yml`](meltano_ingestion/meltano.yml). This is the source of truth for ingestion configuration.
 
- 
+### 8. Run ingestion
 
-### Tap and Target for CSV
+Run the commands below from `meltano_ingestion/`. Complete Application Default Credentials authentication from step 5 first, and confirm the project and dataset values in the repository's root `.env`. The loader reads those values through the variable references in `meltano.yml`. The `--env-file ../.env` option explicitly loads the root `.env`.
 
-Run the following commands in the terminal:
+Load the nine local CSVs:
 
+```bash
+meltano --env-file ../.env run tap-csv target-bigquery
+```
 
-- meltano add tap-csv --variant meltanolabs                    # Add the MeltanoLabs implementation of the CSV tap for reading CSV files from the local directory.
+The configured CSV paths point to `../data/`, so all nine files must be present in the repository's `data/` directory.
 
-- meltano add target-bigquery --variant=z3z1ma                 # Install the Singer target for loading extracted records into Google BigQuery.
+Load the 2017 and 2018 holidays from BrasilAPI:
 
-Note: 
-Add below data under meltano.yml file before running the target code.
-1) Add "setuptools<80" in pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
+```bash
+meltano --env-file ../.env run tap-rest-api-msdk target-bigquery
+```
 
-2) Add below config data under pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
-
-   config:
-      project: olist-data-pipeline-507001
-      dataset: olist_raw
-      location: US
-      denormalized: true
-      threads: 1
-
-3) Add below config data under pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
-
-    config:
-      add_metadata_columns: true
-      files:
-      - entity: raw_orders
-        path: ../data/olist_orders_dataset.csv
-        keys: [order_id]
-        encoding: utf-8-sig
-      - entity: raw_order_items
-        path: ../data/olist_order_items_dataset.csv
-        keys: [order_id, order_item_id]
-        encoding: utf-8-sig
-      - entity: raw_customers
-        path: ../data/olist_customers_dataset.csv
-        keys: [customer_id]
-        encoding: utf-8-sig
-      - entity: raw_sellers
-        path: ../data/olist_sellers_dataset.csv
-        keys: [seller_id]
-        encoding: utf-8-sig
-      - entity: raw_products
-        path: ../data/olist_products_dataset.csv
-        keys: [product_id]
-        encoding: utf-8-sig
-      - entity: raw_category_translation
-        path: ../data/product_category_name_translation.csv
-        keys: [product_category_name]
-        encoding: utf-8-sig
-      - entity: raw_geolocation_dataset
-        path: ../data/olist_geolocation_dataset.csv
-        keys: [geolocation_zip_code_prefix, geolocation_lat, geolocation_lng]
-        encoding: utf-8-sig
-      - entity: raw_order_payments_dataset
-        path: ../data/olist_order_payments_dataset.csv
-        keys: [order_id, payment_sequential]
-        encoding: utf-8-sig
-      - entity: raw_order_reviews_dataset
-        path: ../data/olist_order_reviews_dataset.csv
-        keys: [review_id]
-        encoding: utf-8-sig
-
-
-
-
-- meltano run tap-csv target-bigquery                         # to extract the CSV data and load it into BigQuery
-
-
-### Tap and Target for REST API
-
-Run the following commands in the terminal:
-
- 
-- meltano add tap-rest-api-msdk                                        # Add the REST API tap to the Meltano project.
-
-- meltano install extractor tap-rest-api-msdk                          # Install the extractor and its required packages.
-
-Note: 
-Add below data under meltano.yml file before running the target code.
-1) Add "setuptools<80" in pip_url: tap-rest-api-msdk setuptools<80
-2) Add below config data under pip_url: tap-rest-api-msdk setuptools<80
-
-   config:
-      api_url: https://brasilapi.com.br/api
-      streams:
-      - name: raw_holidays_2017
-        path: /feriados/v1/2017
-        records_path: $[*]
-        primary_keys: [date]
-      - name: raw_holidays_2018
-        path: /feriados/v1/2018
-        records_path: $[*]
-        primary_keys: [date]
-
-
-- meltano run tap-rest-api-msdk target-bigquery                        # to extract data from the REST API and load it into BigQuery
-
- 
+The current loader configuration enables `overwrite: true`, so a successful rerun replaces the tables loaded by that run. After each command succeeds, check the corresponding raw tables in BigQuery and compare CSV table row counts with the source files.

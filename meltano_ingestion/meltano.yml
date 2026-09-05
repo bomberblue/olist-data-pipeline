@@ -9,7 +9,7 @@ plugins:
   extractors:
   - name: tap-csv
     variant: meltanolabs
-    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git
+    pip_url: git+https://github.com/MeltanoLabs/tap-csv.git@1331c4a4f3d2bd7b0757a9a7ea4d27b785c54e04
     config:
       add_metadata_columns: true
       files:
@@ -39,7 +39,7 @@ plugins:
         encoding: utf-8-sig
       - entity: raw_geolocation_dataset
         path: ../data/olist_geolocation_dataset.csv
-        keys: [geolocation_zip_code_prefix, geolocation_lat, geolocation_lng]
+        keys: []
         encoding: utf-8-sig
       - entity: raw_order_payments_dataset
         path: ../data/olist_order_payments_dataset.csv
@@ -47,12 +47,12 @@ plugins:
         encoding: utf-8-sig
       - entity: raw_order_reviews_dataset
         path: ../data/olist_order_reviews_dataset.csv
-        keys: [review_id]
+        keys: [review_id, order_id]
         encoding: utf-8-sig
 
   - name: tap-rest-api-msdk
     variant: widen
-    pip_url: tap-rest-api-msdk setuptools<80
+    pip_url: tap-rest-api-msdk==1.4.2 setuptools==79.0.1
     config:
       api_url: https://brasilapi.com.br/api
       streams:
@@ -68,10 +68,11 @@ plugins:
   loaders:
   - name: target-bigquery
     variant: z3z1ma
-    pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
+    pip_url: git+https://github.com/z3z1ma/target-bigquery.git@090dad0620711efae4b31031b10b0ea88744aef5 setuptools==79.0.1
     config:
-      project: olist-data-pipeline-507001
-      dataset: olist_raw
+      project: ${GOOGLE_CLOUD_PROJECT}
+      dataset: ${BIGQUERY_DATASET}
       location: US
       denormalized: true
+      overwrite: true
       threads: 1

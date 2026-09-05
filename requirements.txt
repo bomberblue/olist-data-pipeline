@@ -1,25 +1,26 @@
+# Direct dependencies pinned from the olist-pipeline Python 3.11 environment.
 # Data ingestion (Extract & Load)
-meltano
+meltano==4.2.2
 
 # Data warehouse transform layer
-dbt-bigquery
+dbt-bigquery==1.12.0
 
 # Data quality
-great_expectations
+great_expectations==1.22.0
 
 # Analysis layer
-SQLAlchemy
-sqlalchemy-bigquery
-google-cloud-bigquery
-db-dtypes
-pandas
-duckdb
-polars
-jupyter
+SQLAlchemy==2.0.52
+sqlalchemy-bigquery==1.17.2
+google-cloud-bigquery==3.44.0
+db-dtypes==1.7.1
+pandas==3.0.5
+duckdb==1.5.5
+polars==1.44.1
+jupyter==1.1.1
 
 # Orchestration
-dagster
-dagster-webserver
+dagster==1.13.20
+dagster-webserver==1.13.20
 
 # Config / credentials
-python-dotenv
+python-dotenv==1.2.3
