@@ -1,4 +1,4 @@
-default_environment: dev
+default_environment: prod
 project_id: 01a05d60-fe6e-7c5c-a0e1-5db51392c40c
 environments:
 - name: dev
@@ -71,8 +71,7 @@ plugins:
     pip_url: git+https://github.com/z3z1ma/target-bigquery.git setuptools<80
     config:
       project: olist-data-pipeline-507001
-      dataset: olist_staging
+      dataset: olist_raw
       location: US
       denormalized: true
       threads: 1
-
