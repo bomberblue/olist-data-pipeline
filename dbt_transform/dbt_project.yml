@@ -34,6 +34,9 @@ models:
     staging:
       +materialized: view
 
+    intermediate:
+      +materialized: view
+
     marts:
       +schema: olist_marts
       +materialized: table
