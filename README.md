@@ -19,9 +19,8 @@ The whole pipeline is orchestrated by Dagster.
 ├── README.md
 ├── requirements.txt
 ├── .env.example          # copy to .env and fill in; .env itself is git-ignored
-├── data/
-│   └── raw/               # the 9 Olist CSVs (git-ignored, not committed)
-├── meltano/                # tap-csv -> target-bigquery config (owner: A)
+├── data/                  # the 9 Olist CSVs (git-ignored, not committed)
+├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config (owner: A)
 ├── dbt/
 │   ├── models/
 │   │   ├── staging/        # stg_* models (owner: B)
@@ -64,7 +63,7 @@ Update the GCP ID "olist-data-pipeline-507001" under .env
 
 ### 4. Data
 
-Download the 9 Olist CSVs from Kaggle into `data/raw/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
+Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
 
 
 ### 5. GCP authentication
