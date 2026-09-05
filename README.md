@@ -50,18 +50,7 @@ conda activate olist-pipeline
 pip install -r requirements.txt
 ```
 
-Conda creates and manages the isolated Python environment; pip installs the packages listed in `requirements.txt` inside it.
-
-`requirements.txt` pins the direct package versions from the team's existing `olist-pipeline` Python 3.11 environment. Meltano installs its taps and target separately using the pinned `pip_url` entries in `meltano_ingestion/meltano.yml`:
-
-- `tap-csv`: the installed Git commit `1331c4a4f3d2bd7b0757a9a7ea4d27b785c54e04` (version 1.2.0).
-- `target-bigquery`: the installed Git commit `090dad0620711efae4b31031b10b0ea88744aef5` (version 0.7.2).
-- `tap-rest-api-msdk`: release 1.4.2, installed and checked separately in a temporary Python 3.11 environment.
-- The REST tap and BigQuery target also pin `setuptools==79.0.1`, preserving the existing `setuptools<80` compatibility constraint using the version installed with the target.
-
-Validation covered dependency resolution of `requirements.txt`, imports and dependency checks in the existing main environment, and dependency checks and CLI version commands for all three plugins. These checks do not establish successful end-to-end BigQuery ingestion. Transitive dependencies are not fully locked and can still vary between installations.
-
-When upgrading dependencies, update the relevant pins in `requirements.txt` or `meltano_ingestion/meltano.yml`, repeat the compatibility checks, and validate ingestion before sharing the change. The files under `meltano_ingestion/plugins/` store Meltano plugin definitions; the project's explicit `pip_url` entries select the plugin versions used here.
+Conda creates and manages the isolated Python environment; pip installs the packages listed in `requirements.txt` inside it. Meltano installs its taps and target separately from the definitions in `meltano_ingestion/meltano.yml`.
 
 You do not need every package in requirements.txt installed for your own work — see the "Who needs this" breakdown in the proposal document's Setup and Prerequisites section. At minimum, everyone needs Python and dbt-bigquery.
 
@@ -80,7 +69,7 @@ GOOGLE_CLOUD_PROJECT=olist-data-pipeline-507001
 BIGQUERY_DATASET=olist_raw
 ```
 
-The loader in `meltano_ingestion/meltano.yml` references these variables. The ingestion commands in step 8 explicitly load this root `.env`; a separate `.env` inside `meltano_ingestion/` is unnecessary. Google authentication is configured separately through Application Default Credentials in step 5. dbt continues to use its own `profiles.yml` from step 6.
+The loader in `meltano_ingestion/meltano.yml` references these variables. The ingestion commands in step 8 explicitly load this root `.env`. Google authentication is configured separately in step 5, while dbt uses its own `profiles.yml` from step 6.
 
 ### 4. Data
 
@@ -124,16 +113,6 @@ dbt_transform:
       threads: 4
 ```
 
-
-From the repository root, check the dbt profile and project:
-
-```bash
-cd dbt_transform
-dbt debug --profiles-dir .
-dbt parse --profiles-dir .
-```
-
-
 ### 7. Install the existing Meltano project
 
 After cloning the repository and completing steps 1–6, activate the Python environment created in step 2. From the repository root, install the plugins already defined in the project:
@@ -166,6 +145,4 @@ Load the 2017 and 2018 holidays from BrasilAPI:
 meltano --env-file ../.env run tap-rest-api-msdk target-bigquery
 ```
 
-The current loader configuration enables `overwrite: true`, so a successful rerun replaces the tables loaded by that run. After each command succeeds, check the corresponding raw tables in BigQuery and compare CSV table row counts with the source files.
-
-The pinned loader's overwrite implementation may fail when replacing partitioned tables because its replacement SQL omits partitioning. This concern was identified from the loader code; it has not been tested against this project in BigQuery. Verify a small load and rerun in an isolated dataset before relying on shared-table refreshes.
+After each command succeeds, check the corresponding raw tables in BigQuery and compare CSV table row counts with the source files.
