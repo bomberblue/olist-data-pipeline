@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: int_order_items
+    description: "Order item metrics. Grain: one row per order item."
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+
+      - name: order_item_id
+        tests:
+          - not_null
+
+      - name: item_total_value
+        tests:
+          - not_null
+
+  - name: int_order_payments
+    description: "Aggregated payment metrics. Grain: one row per order."
+
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: total_payment_value
+        tests:
+          - not_null
+
+  - name: int_order_reviews
+    description: "Aggregated review metrics. Grain: one row per order."
+
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: average_review_score
+        tests:
+          - not_null
+
+  - name: int_customer_orders
+    description: "Customer order history. Grain: one row per order."
+
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_unique_id
+        tests:
+          - not_null
+
+      - name: customer_order_number
+        tests:
+          - not_null
+
+  - name: int_orders
+    description: "Order-level business metrics. Grain: one row per order."
+
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        tests:
+          - not_null
+
+      - name: order_item_count
+        tests:
+          - not_null
+
+      - name: order_gmv
+        tests:
+          - not_null
+
+      - name: order_total_value
+        tests:
+          - not_null
