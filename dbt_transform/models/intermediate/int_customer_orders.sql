@@ -15,7 +15,7 @@
         customers.customer_unique_id,
         orders.order_purchase_timestamp,
         orders.order_status
-        FROM {{ ref('stg_orders')}} orders LEFT JOIN {{ ref('stg_customers') }} customers
+        FROM {{ ref('stg_orders')}} orders INNER JOIN {{ ref('stg_customers') }} customers
         ON orders.customer_id = customers.customer_id
     )
 

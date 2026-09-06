@@ -18,7 +18,6 @@ models:
 
   - name: int_order_payments
     description: "Aggregated payment metrics. Grain: one row per order."
-
     columns:
       - name: order_id
         tests:
@@ -31,7 +30,6 @@ models:
 
   - name: int_order_reviews
     description: "Aggregated review metrics. Grain: one row per order."
-
     columns:
       - name: order_id
         tests:
@@ -44,7 +42,6 @@ models:
 
   - name: int_customer_orders
     description: "Customer order history. Grain: one row per order."
-
     columns:
       - name: order_id
         tests:
@@ -61,7 +58,6 @@ models:
 
   - name: int_orders
     description: "Order-level business metrics. Grain: one row per order."
-
     columns:
       - name: order_id
         tests:
