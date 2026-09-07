@@ -97,7 +97,7 @@ final AS
         ON orders.order_id = order_payments.order_id
     INNER JOIN customer_orders
         ON orders.order_id = customer_orders.order_id
-    INNER JOIN  order_reviews
+    LEFT JOIN  order_reviews
         ON orders.order_id = order_reviews.order_id
 )
 
