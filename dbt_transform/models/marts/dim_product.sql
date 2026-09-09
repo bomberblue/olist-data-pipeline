@@ -1,3 +1,8 @@
+/*
+ * This model creates a dimension table for product data.
+ * It joins the product data with category translation data to include English category names.
+ */
+ 
 SELECT
     to_hex(md5(cast(product.product_id AS string))) AS product_key,
     product.product_id,

@@ -148,7 +148,7 @@ models:
     description: "Olist geolocation records. Multiple rows may exist for a ZIP prefix."
 
     columns:
-      - name: zip_code
+      - name: geolocation_zip_code_prefix
         tests:
           - not_null
 

@@ -32,5 +32,5 @@ SELECT
     reviews.review_comment_message,
     reviews.review_creation_date,
     reviews.review_answer_timestamp
-FROM reviews INNER JOIN orders ON reviews.order_id = orders.order_id
+FROM reviews LEFT JOIN orders ON reviews.order_id = orders.order_id
 LEFT JOIN customers ON orders.customer_unique_id = customers.customer_unique_id

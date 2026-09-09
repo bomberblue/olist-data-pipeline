@@ -91,11 +91,11 @@ final AS
             ELSE false
         END AS is_late
  FROM orders
-    INNER JOIN  order_items
+    LEFT JOIN  order_items
         ON orders.order_id = order_items.order_id
-    INNER JOIN order_payments
+    LEFT JOIN order_payments
         ON orders.order_id = order_payments.order_id
-    INNER JOIN customer_orders
+    LEFT JOIN customer_orders
         ON orders.order_id = customer_orders.order_id
     LEFT JOIN  order_reviews
         ON orders.order_id = order_reviews.order_id

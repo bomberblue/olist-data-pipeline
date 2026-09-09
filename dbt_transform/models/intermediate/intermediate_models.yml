@@ -67,15 +67,3 @@ models:
       - name: customer_id
         tests:
           - not_null
-
-      - name: order_item_count
-        tests:
-          - not_null
-
-      - name: order_gmv
-        tests:
-          - not_null
-
-      - name: order_total_value
-        tests:
-          - not_null

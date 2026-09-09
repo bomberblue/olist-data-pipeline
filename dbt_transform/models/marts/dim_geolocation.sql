@@ -1,3 +1,9 @@
+/*
+ * This model creates a dimension table for geolocation data.
+ * It deduplicates the data based on zip code prefix, latitude, longitude, city, and state.
+ * The region is derived based on the state.
+ */
+
 WITH geolocation AS 
 (
     SELECT *
@@ -7,7 +13,7 @@ WITH geolocation AS
 deduplicated AS 
 (
     SELECT
-        zip_code,
+        geolocation_zip_code_prefix,
         latitude,
         longitude,
         city,
@@ -16,18 +22,18 @@ deduplicated AS
 
     QUALIFY ROW_NUMBER() OVER (
         PARTITION BY
-            zip_code,
+            geolocation_zip_code_prefix,
             latitude,
             longitude,
             city,
             state
-        ORDER BY zip_code
+        ORDER BY geolocation_zip_code_prefix
     ) = 1
 )
 
 SELECT
-    to_hex(md5(cast(zip_code AS string))) AS geolocation_key,
-    zip_code,
+    to_hex(md5(cast(geolocation_zip_code_prefix AS string))) AS geolocation_key,
+    geolocation_zip_code_prefix as zip_code_prefix,
     latitude,
     longitude,
     city,

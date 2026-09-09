@@ -1,3 +1,10 @@
+/*
+ * This model creates a fact table for order items.
+ * It joins the order items data with orders, products, and sellers to include relevant keys and attributes.
+ * The fact table includes a unique order item key, order key, product key, seller key, order date key, and other relevant attributes.
+ * One row per order item (order_id + order_item_id)
+ */
+ 
 with order_items as (
 
     select *
@@ -50,6 +57,6 @@ SELECT
     order_items.price,
     order_items.freight_value,
     order_items.shipping_limit_date
-FROM order_items INNER JOIN orders ON order_items.order_id = orders.order_id
-INNER JOIN products ON order_items.product_id = products.product_id
-INNER JOIN sellers ON order_items.seller_id = sellers.seller_id
+FROM order_items LEFT JOIN orders ON order_items.order_id = orders.order_id
+LEFT JOIN products ON order_items.product_id = products.product_id
+LEFT JOIN sellers ON order_items.seller_id = sellers.seller_id
