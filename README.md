@@ -30,7 +30,16 @@ The whole pipeline is orchestrated by Dagster.
 ├── orchestration/
 │   └── dagster/              # Dagster assets and schedule (owner: E)
 └── notebooks/
-    └── analysis/               # Jupyter notebooks (owner: D)
+    └── analysis/                  # Jupyter notebooks (owner: D)
+        └── .env                   # Environment variables (no keyfile path)
+        └── analysis.py            # Run analysis
+        └── config.py              # Configuration (OAuth based)
+        └── duckdb_engline.py      # DuckDB connection via SQLAlchemy
+        └── engine.py              # SQLAlchemy connection with OAuth
+        └── queries.py             # All analysis queries
+        └── test_connection.py     # Test connections with OAuth
+        └── visualization.py       # Generate charts
+        └── output.py              # Genereated outputs
 ```
 
 ## Setup
