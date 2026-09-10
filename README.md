@@ -232,3 +232,18 @@ The REST API configuration in `meltano.yml` is:
 
 
 - meltano --env-file ../.env run tap-rest-api-msdk target-bigquery  # Extract the REST API data and load it into BigQuery.
+
+### 8. Analysis setup.
+
+Add a .env file under the notebooks/analysis folder with below details
+# GCP Configuration
+PROJECT_ID=olist-data-pipeline-507001
+DATASET=olist_mart
+
+# DuckDB Performance Settings
+DUCKDB_MEMORY_LIMIT=4GB
+DUCKDB_THREADS=4
+
+# Pandas Display Settings
+PD_MAX_ROWS=100
+PD_MAX_COLUMNS=20
