@@ -63,9 +63,9 @@ SELECT
     END AS is_year_end,
 
     CASE
-        WHEN holidays.hol_date IS NOT NULL
-        THEN TRUE
-        ELSE FALSE
+        WHEN EXTRACT(YEAR FROM dates.date_day) = 2016 THEN 'NA'
+        WHEN holidays.hol_date IS NOT NULL THEN 'TRUE'
+        ELSE 'FALSE'
     END AS is_holiday,
     holidays.hol_name AS holiday_name,
     holidays.hol_type AS holiday_type,

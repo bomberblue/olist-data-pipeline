@@ -83,10 +83,10 @@ final AS
         ) AS estimated_delivery_days,
 
         CASE
-            WHEN orders.order_delivered_customer_date
-                 > orders.order_estimated_delivery_date
+            WHEN DATE(orders.order_delivered_customer_date)
+                 > DATE(orders.order_estimated_delivery_date)
                 THEN true
-            WHEN orders.order_delivered_customer_date IS NULL
+            WHEN DATE(orders.order_delivered_customer_date) IS NULL
                 THEN null
             ELSE false
         END AS is_late
