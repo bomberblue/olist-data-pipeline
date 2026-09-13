@@ -31,20 +31,36 @@ first_orders AS
         MIN(order_purchase_timestamp) AS first_order_timestamp
     FROM customer_orders
     GROUP BY customer_unique_id
+),
+
+last_orders_geolocation AS 
+(
+    SELECT
+        customer_unique_id,
+        customer_zip_code_prefix,
+        customer_city,
+        customer_state
+    FROM customer_orders 
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY customer_unique_id
+        ORDER BY order_purchase_timestamp DESC, order_id DESC
+    ) = 1
 )
 
 SELECT
     to_hex(md5(cast(customers.customer_unique_id AS string))) AS customer_key,
     customers.customer_id,
     customers.customer_unique_id,
-    customers.customer_zip_code_prefix,
-    customers.customer_city,
-    customers.customer_state,
+    last_orders_geolocation.customer_zip_code_prefix AS customer_zip_code_prefix,
+    last_orders_geolocation.customer_city AS customer_city,
+    last_orders_geolocation.customer_state AS customer_state,
     date(first_orders.first_order_timestamp) AS customer_first_order_date,
     to_hex(md5(cast(customers.customer_zip_code_prefix AS string))) AS geolocation_key
 FROM customers
 LEFT JOIN first_orders
     ON customers.customer_unique_id = first_orders.customer_unique_id
+LEFT JOIN last_orders_geolocation
+    ON customers.customer_unique_id = last_orders_geolocation.customer_unique_id
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY customers.customer_unique_id
     ORDER BY customers.customer_id
