@@ -13,12 +13,7 @@ SELECT
     state
 FROM {{ ref('stg_geolocation') }}
 QUALIFY ROW_NUMBER() OVER (
-    PARTITION BY
-        geolocation_zip_code_prefix,
-        latitude,
-        longitude,
-        city,
-        state
-    ORDER BY geolocation_zip_code_prefix
+    PARTITION BY geolocation_zip_code_prefix
+    ORDER BY city, state, latitude, longitude
 ) = 1
 
