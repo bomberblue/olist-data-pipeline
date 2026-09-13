@@ -45,7 +45,7 @@ SELECT
     orders.order_delivered_customer_date,
     orders.order_estimated_delivery_date,
     orders.order_item_count AS number_of_items,
-    orders.order_gmv AS Gross_Merchandise_Value,
+    orders.order_gmv AS gross_merchandise_value,
     orders.total_freight_value,
     orders.order_total_value,
     orders.total_payment_value,

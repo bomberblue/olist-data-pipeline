@@ -10,190 +10,189 @@
  * It calculates the last order date, frequency of orders, and monetary value for each customer.
  * It also assigns RFM scores and segments customers based on their RFM values.
  * One row per unique customer ID
- */
+ 
+| Dimension         | Distribution / Observation                                         | Scoring Method         |   Score |
+| ----------------- | ------------------------------------------------------------------ | ---------------------- | ------: |
+| **Recency (R)**   | Widely distributed and skewed; no natural cutoff intervals         | Percentile             | **1–5** |
+| **Frequency (F)** | 96.96% of customers have only one order; very few repeat customers | Business-defined bands | **1–4** |
+| **Monetary (M)**  | Strong right skew with extreme high-value outliers                 | Percentile             | **1–5** |
 
-/*
- * Join the order fact table to get Recency and Frequency
- */
-WITH orders AS 
-(
-    SELECT        
-        order_key,
-        customer_key,
-        order_id,
-        order_status,
-        order_purchase_timestamp
-    FROM {{ ref('fact_orders') }}
-),
+| Dimension     |  Score  |
+| ------------- | --------|
+| **Recency**   |  1–5    |
+| **Frequency** |  1–4    |
+| **Monetary**  |  1–5    |
 
-/*
- * Join the order items fact table to get the price and freight value for each order.
- * This allows for the calculation of the monetary value for each customer.
- * Only include relevant columns from the order items fact table.
- */
-order_items AS 
-(
-    SELECT        
-        order_key,
-        price,
-        freight_value
-    FROM {{ ref('fact_order_items') }}
-),
+ * Recency is calculated as the number of days since the last order date.
+ * RFM Analysis Date: 2018-10-18, selected as the day immediately following the Olist latest transaction date.
 
-/*
- * Calculate the last order date and frequency of orders for each customer.
- * Exclude canceled and unavailable orders from the calculations.
- * Group by customer_key to get one row per customer.
- * Use MAX to get the latest order date and COUNT(DISTINCT) to get the frequency of unique orders.
- */
-customer_orders AS 
+Recency scoring
+| Percentile rank of Recency | Recency score | Meaning                        |
+| -------------------------- | ------------: | ------------------------------ |
+| 0–20%                      |         **5** | Most recently active customers |
+| >20–40%                    |         **4** | Relatively recent              |
+| >40–60%                    |         **3** | Average recency                |
+| >60–80%                    |         **2** | Relatively inactive            |
+| >80–100%                   |         **1** | Least recently active          |
+
+Freqency scoring
+| Frequency | Score | Interpretation         |
+| --------: | ----: | ---------------------- |
+|   1 order | **1** | One-time customer      |
+|  2 orders | **2** | Repeat customer        |
+|  3 orders | **3** | Frequent customer      |
+| 4+ orders | **4** | Highly repeat customer |
+
+Monetary Scoring
+| Percentile rank of Monetary | Score | Meaning                 |
+| --------------------------- | ----: | ----------------------- |
+| 0–20%                       | **1** | Lowest-value customers  |
+| >20–40%                     | **2** | Low-value customers     |
+| >40–60%                     | **3** | Average-value customers |
+| >60–80%                     | **4** | High-value customers    |
+| >80–100%                    | **5** | Highest-value customers |
+
+| Dimension     | Score 1      | Score 2  | Score 3  | Score 4   | Score 5     |
+| ------------- | ------------ | -------- | -------- | --------- | ----------- |
+| **Recency**   | Least recent |          | Average  |           | Most recent |
+| **Frequency** | 1 order      | 2 orders | 3 orders | 4+ orders | —           |
+| **Monetary**  | Lowest 20%   | 20–40%   | 40–60%   | 60–80%    | Highest 20% |
+
+| Segment                 | Recency (R) | Frequency (F) | Monetary (M) | Customer Profile                                      | Suggested Action                       |
+| ----------------------- | ----------: | ------------: | -----------: | ----------------------------------------------------- | -------------------------------------- |
+| **Champions**           |         ≥ 4 |           ≥ 4 |          ≥ 4 | Recent, frequent, high-value customers                | Reward, VIP treatment, loyalty program |
+| **Loyal Customers**     |         ≥ 4 |           ≥ 3 |          Any | Frequent and active customers                         | Retention, cross-sell                  |
+| **Big Spenders**        |         ≥ 3 |           Any |          = 5 | High-value customers                                  | Premium offers, exclusive products     |
+| **New Customers**       |         ≥ 4 |           = 1 |          Any | Recent first-time buyers                              | Encourage second purchase              |
+| **Potential Loyalists** |         ≥ 4 |           2–3 |          Any | Recent repeat customers with growth potential         | Loyalty incentives                     |
+| **At Risk**             |         2–3 |           ≥ 3 |          Any | Previously engaged repeat customers becoming inactive | Win-back campaign                      |
+| **Needs Attention**     |         2–3 |           ≤ 2 |          Any | Low-frequency customers showing declining engagement  | Personalized promotion                 |
+| **Lost Customers**      |         = 1 |           Any |          Any | Long-inactive customers                               | Reactivation campaign                  |
+
+
+*/
+
+WITH customer_metrics AS 
 (
     SELECT
         customer_key,
-        max(date(order_purchase_timestamp)) AS last_order_date,
-        count(distinct order_id) AS frequency
-    FROM orders
-    WHERE upper(order_status) NOT IN(
+        DATE('2018-10-18') AS analysis_date,
+        DATE_DIFF(
+            DATE('2018-10-18'),
+            DATE(MAX(order_purchase_timestamp)),
+            DAY
+        ) AS recency,
+        COUNT(DISTINCT order_id) AS frequency,
+        SUM(gross_merchandise_value) AS monetary
+    FROM {{ ref('fact_orders') }} 
+    WHERE order_status NOT IN (
         'CANCELED',
         'UNAVAILABLE'
     )
     GROUP BY customer_key
 ),
 
-/*
- * Calculate the monetary value for each customer.
- * Exclude canceled and unavailable orders from the calculations.
- * Group by customer_key to get one row per customer.
- * Use SUM to get the total monetary value spent by the customer.
- */
- customer_monetary AS 
- (
-    SELECT
-        orders.customer_key,
-        -- GMV = product price only
-        sum(order_items.price) as monetary_value
-    FROM orders INNER JOIN order_items ON orders.order_key = order_items.order_key
-    WHERE UPPER(orders.order_status) NOT IN (
-        'CANCELED',
-        'UNAVAILABLE'
-    )
-    GROUP BY orders.customer_key
-),
-
-/*
- * Combine the customer orders and monetary value data.
- * Join with the customer dimension to get the customer_unique_id.
- * Use COALESCE to handle cases where a customer may not have any monetary value (e.g., no completed orders).
- * This ensures that all customers are included in the final RFM analysis, even if they have no monetary value.
- */
-base AS 
-(
-    SELECT
-        customer_orders.customer_key,
-        customers.customer_unique_id,
-        customer_orders.last_order_date,
-        customer_orders.frequency,
-        coalesce(customer_monetary.monetary_value, 0) AS monetary_value
-    FROM customer_orders
-    LEFT JOIN customer_monetary ON customer_orders.customer_key = customer_monetary.customer_key
-    LEFT JOIN {{ ref('dim_customer') }} AS customers ON customer_orders.customer_key = customers.customer_key
-),
-
-/*
- * Calculate the recency in days for each customer.
- * Recency is defined as the number of days since the customer's last order.
- * Use MAX to get the latest order date and calculate the difference from the current date.
- * This provides a measure of how recently a customer has made a purchase.
- */
-recency AS 
-(
-    SELECT
-        *,
-        date_diff(
-            (SELECT MAX(last_order_date)
-             FROM customer_orders),
-            last_order_date,
-            day
-        ) as recency_days
-    FROM base
-),
-/*
- * Assign RFM scores to each customer based on their recency, frequency, and monetary values.
- * Use NTILE to divide the customers into 5 equal groups for each RFM metric.
- * Higher scores indicate better performance (e.g., more recent, more frequent, higher monetary value).
- * This allows for segmentation of customers based on their RFM scores.
- */
 scored AS 
 (
     SELECT
         *,
-        -- Lower recency is better
-        ntile(5) over (
-            order by recency_days desc
-        ) as recency_score,
+        
+        CASE
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY recency ASC
+            ) <= 0.20 THEN 5
 
-        -- Higher frequency is better
-        ntile(5) over (
-            order by frequency asc
-        ) as frequency_score,
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY recency ASC
+            ) <= 0.40 THEN 4
 
-        -- Higher monetary value is better
-        ntile(5) over (
-            order by monetary_value asc
-        ) as monetary_score
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY recency ASC
+            ) <= 0.60 THEN 3
 
-    FROM recency
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY recency ASC
+            ) <= 0.80 THEN 2
+
+            ELSE 1
+        END AS recency_score,
+
+        CASE
+            WHEN frequency = 1 THEN 1
+            WHEN frequency = 2 THEN 2
+            WHEN frequency = 3 THEN 3
+            WHEN frequency >= 4 THEN 4
+        END AS frequency_score,
+
+        CASE
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY monetary ASC
+            ) <= 0.20 THEN 1
+
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY monetary ASC
+            ) <= 0.40 THEN 2
+
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY monetary ASC
+            ) <= 0.60 THEN 3
+
+            WHEN PERCENT_RANK() OVER (
+                ORDER BY monetary ASC
+            ) <= 0.80 THEN 4
+            ELSE 5
+        END AS monetary_score
+
+    FROM customer_metrics
 )
 
-/*
- * Final selection of customer RFM data.
- * Include customer_key, customer_unique_id, last_order_date, recency_days, frequency, monetary_value, and RFM scores.
- * Concatenate the RFM scores to create a combined RFM score for each customer.
- * Assign customer segments based on their RFM scores using CASE statements.
- * This provides a comprehensive view of each customer's behavior and value to the business.
- */
+SELECT
+    *,
 
-SELECT    customer_key,
-    customer_unique_id,
-    last_order_date,
-    recency_days,
-    frequency,
-    monetary_value,
+    CONCAT(
+        CAST(recency_score AS STRING),
+        CAST(frequency_score AS STRING),
+        CAST(monetary_score AS STRING)
+    ) AS rfm_code,
 
-    recency_score,
-    frequency_score,
-    monetary_score,
+    recency_score
+        + frequency_score
+        + monetary_score AS rfm_total_score,
 
-    concat(
-        cast(recency_score as string),
-        cast(frequency_score as string),
-        cast(monetary_score as string)
-    ) as rfm_score,
+    CASE
+        WHEN recency_score >= 4
+         AND frequency_score >= 4
+         AND monetary_score >= 4
+            THEN 'Champions'
 
-    case
+        WHEN recency_score >= 4
+         AND frequency_score >= 3
+            THEN 'Loyal Customers'
 
-        when recency_score >= 4
-             and frequency_score >= 4
-             and monetary_score >= 4
-            then 'Champions'
+        WHEN monetary_score = 5
+         AND recency_score >= 3
+            THEN 'Big Spenders'
 
-        when recency_score >= 3
-             and frequency_score >= 3
-            then 'Loyal Customers'
+        WHEN frequency_score = 1
+         AND recency_score >= 4
+            THEN 'Recent One-Time Customers'
 
-        when recency_score >= 4
-             and frequency_score <= 2
-            then 'New Customers'
+        WHEN recency_score >= 4
+         AND frequency_score BETWEEN 2 AND 3
+            THEN 'Potential Loyalists'
 
-        when recency_score <= 2
-             and frequency_score >= 3
-            then 'At Risk'
+        WHEN recency_score BETWEEN 2 AND 3
+            AND frequency_score >= 3
+            THEN 'At Risk'
 
-        when recency_score <= 2
-             and frequency_score <= 2
-            then 'Lost Customers'
+        WHEN recency_score BETWEEN 2 AND 3
+         AND frequency_score <= 2
+            THEN 'Needs Attention'
 
-        else 'Potential Loyalists'
+        WHEN recency_score = 1
+            THEN 'Lost Customers'
 
-    end as customer_segment
-from scored
+        ELSE 'Other'
+    END AS customer_segment
+
+FROM scored
