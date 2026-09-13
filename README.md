@@ -32,13 +32,13 @@ The whole pipeline is orchestrated by Dagster.
 └── notebooks/
     └── analysis/                  # Jupyter notebooks (owner: D)
         └── .env                   # Environment variables (no keyfile path)
-        └── analysis.py            # Run analysis
+        └── analysis.py            # Runs focused business analyses
         └── config.py              # Configuration (OAuth based)
         └── duckdb_engine.py      # DuckDB connection via SQLAlchemy
         └── engine.py              # SQLAlchemy connection with OAuth
-        └── queries.py             # All analysis queries
-        └── test_connection.py     # Test connections with OAuth
-        └── visualizations.py       # Generate charts
+        └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
+        └── check_csvs.py          # Validates generated analysis outputs
+        └── visualizations.py       # Generates business charts from outputs
         └── output.py              # Genereated outputs
 ```
 
@@ -247,3 +247,7 @@ DUCKDB_THREADS=4
 # Pandas Display Settings
 PD_MAX_ROWS=100
 PD_MAX_COLUMNS=20
+
+# Analysis
+RFM_TOP_CUSTOMERS_LIMIT=100
+OUTPUT_DIR=output

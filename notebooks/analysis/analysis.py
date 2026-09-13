@@ -1,174 +1,227 @@
 # analysis.py
+
 """
-Simplified analysis runner for Olist star schema.
-Loads and previews all dimension and fact tables.
+Focused Olist analysis runner.
+
+The shared warehouse keeps the full available history.
+Holiday-specific analyses are restricted to Jan 2017 through Jun 2018
+because holiday classification is available only for that period.
 """
+
+import logging
+import time
 
 import pandas as pd
-import time
-import logging
-from config import PD_MAX_ROWS, PD_MAX_COLUMNS
-from engine import test_connection
-from duckdb_engine import duck
-from queries import *
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+from config import (
+    PD_MAX_ROWS,
+    PD_MAX_COLUMNS,
+    OUTPUT_DIR,
+)
+from engine import (
+    engine,
+    test_connection,
+    verify_required_tables,
+)
+
+from queries import (
+    monthly_sales_trend,
+    rfm_analysis,
+    rfm_segment_summary,
+    holiday_impact,
+    holiday_impact_by_quarter,
+    holiday_daily_metrics_by_quarter,
+    holiday_product_category_mix,
+)
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
 logger = logging.getLogger(__name__)
 
-# Set pandas display options
-pd.set_option('display.max_rows', PD_MAX_ROWS)
-pd.set_option('display.max_columns', PD_MAX_COLUMNS)
-pd.set_option('display.width', 120)
-pd.set_option('display.float_format', '{:,.2f}'.format)
+
+pd.set_option("display.max_rows", PD_MAX_ROWS)
+pd.set_option("display.max_columns", PD_MAX_COLUMNS)
+pd.set_option("display.width", 160)
+pd.set_option("display.float_format", "{:,.2f}".format)
+
+OUTPUT_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+
+ANALYSES = [
+    (
+        "monthly_sales_trend",
+        "1. Monthly Sales Trend",
+        monthly_sales_trend,
+    ),
+    (
+        "rfm_analysis",
+        "2. RFM - Top Customers",
+        rfm_analysis,
+    ),
+    (
+        "rfm_segment_summary",
+        "3. RFM - Segment Summary",
+        rfm_segment_summary,
+    ),
+    (
+        "holiday_impact",
+        "4. Holiday Impact - Jan 2017 to Jun 2018",
+        holiday_impact,
+    ),
+    (
+        "holiday_impact_by_quarter",
+        "5. Holiday Impact by Quarter",
+        holiday_impact_by_quarter,
+    ),
+    (
+        "holiday_daily_metrics_by_quarter",
+        "6. Holiday Average Orders / GMV per Day",
+        holiday_daily_metrics_by_quarter,
+    ),
+    (
+        "holiday_product_category_mix",
+        "7. Holiday vs Non-Holiday Product Category Mix",
+        holiday_product_category_mix,
+    ),
+]
 
 
 def print_section(title):
-    """Print a formatted section header."""
     print("\n" + "=" * 80)
-    print(f"📊 {title}")
+    print(f" {title}")
     print("=" * 80)
-
-
-def print_table_preview(df, table_name, limit=5):
-    """Print a formatted table preview."""
-    if df.empty:
-        print(f"   ⚠️ {table_name} is empty")
-        return
-    
-    print(f"\n   📋 First {limit} rows from {table_name}:")
-    print("-" * 60)
-    print(df.to_string(index=False))
-    print(f"\n   📊 Shape: {df.shape[0]} rows × {df.shape[1]} columns")
-    print(f"   📋 Columns: {', '.join(df.columns.tolist())}")
 
 
 def run_analysis():
-    """Load and preview all tables."""
-    
+    """Run each analysis once and return a dictionary of DataFrames."""
+
     start_time = time.time()
-    
+
     print("=" * 80)
-    print("📊 OLIST STAR SCHEMA - TABLE PREVIEW")
-    print("🔐 Using OAuth Authentication")
+    print(" OLIST ANALYSIS")
+    print(" BigQuery + SQLAlchemy + Pandas")
     print("=" * 80)
-    
-    # Test connection
-    print("\n🔌 Testing BigQuery Connection with OAuth...")
+
+    print("\nTesting BigQuery connection and mart tables...")
+
     try:
-        test_connection()
+        test_connection(engine)
+        verify_required_tables(engine)
+
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
-        print("   Make sure you've run: gcloud auth application-default login")
+        logger.exception(
+            "BigQuery validation failed"
+        )
+        print(
+            f"Validation failed: {e}"
+        )
+        return {}
+
+    results = {}
+
+    for name, title, func in ANALYSES:
+        print_section(title)
+
+        try:
+            df = func()
+            results[name] = df
+
+            if df is None or df.empty:
+                print(
+                    "No data returned"
+                )
+                continue
+
+            print(
+                df.to_string(
+                    index=False
+                )
+            )
+
+            print(
+                f"\nShape: "
+                f"{df.shape[0]} rows × "
+                f"{df.shape[1]} columns"
+            )
+
+        except Exception as e:
+            logger.exception(
+                "Error running %s",
+                title,
+            )
+            print(
+                f"Error: {e}"
+            )
+
+    elapsed = (
+        time.time()
+        - start_time
+    )
+
+    print(
+        "\n" + "=" * 80
+    )
+    print(
+        f" Analysis complete in "
+        f"{elapsed:.2f} seconds"
+    )
+    print(
+        "=" * 80
+    )
+
+    return results
+
+
+def export_results(results):
+    """Export already-computed results without rerunning the queries."""
+
+    if not results:
+        print(
+            "\nNo results available to export."
+        )
         return
-    
-    # =====================================================
-    # DIMENSION TABLES
-    # =====================================================
-    print_section("DIMENSION TABLES")
-    
-    dimensions = [
-        ("dim_customer", get_dim_customer),
-        ("dim_product", get_dim_product),
-        ("dim_seller", get_dim_seller),
-        ("dim_date", get_dim_date),
-        ("dim_geolocation", get_dim_geolocation)
-    ]
-    
-    for name, func in dimensions:
-        print(f"\n📋 TABLE: {name.upper()}")
-        print("-" * 60)
-        try:
-            df = func(limit=5)
-            print_table_preview(df, name, limit=5)
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-    
-    # =====================================================
-    # FACT TABLES
-    # =====================================================
-    print_section("FACT TABLES")
-    
-    facts = [
-        ("fact_orders", get_fact_orders),
-        ("fact_order_items", get_fact_order_items),
-        ("fact_reviews", get_fact_reviews),
-        ("fact_payments", get_fact_payments)
-    ]
-    
-    for name, func in facts:
-        print(f"\n📋 TABLE: {name.upper()}")
-        print("-" * 60)
-        try:
-            df = func(limit=5)
-            print_table_preview(df, name, limit=5)
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-    
-    # =====================================================
-    # ROW COUNTS SUMMARY
-    # =====================================================
-    print_section("ROW COUNTS SUMMARY")
-    
-    try:
-        counts = get_table_row_counts()
-        print("\n   📊 Table row counts:")
-        print("-" * 50)
-        for table, count in counts.items():
-            print(f"      📊 {table:<25} {count:>10,}")
-    except Exception as e:
-        print(f"   ❌ Error getting row counts: {e}")
-    
-    elapsed = time.time() - start_time
-    print("\n" + "=" * 80)
-    print(f"✅ Analysis Complete! Time: {elapsed:.2f} seconds")
-    print("=" * 80)
 
+    print(
+        "\nExporting results to CSV..."
+    )
 
-def export_results():
-    """Export all table previews to CSV files."""
-    print("\n📁 Exporting table previews to CSV...")
-    
-    import os
-    os.makedirs("output", exist_ok=True)
-    
-    tables = {
-        'dim_customer': get_dim_customer,
-        'dim_product': get_dim_product,
-        'dim_seller': get_dim_seller,
-        'dim_date': get_dim_date,
-        'dim_geolocation': get_dim_geolocation,
-        'fact_orders': get_fact_orders,
-        'fact_order_items': get_fact_order_items,
-        'fact_reviews': get_fact_reviews,
-        'fact_payments': get_fact_payments
-    }
-    
-    for name, func in tables.items():
+    for name, df in results.items():
+
+        if df is None or df.empty:
+            print(
+                f"   No data for: {name}"
+            )
+            continue
+
+        filename = (
+            OUTPUT_DIR
+            / f"{name}.csv"
+        )
+
         try:
-            df = func(limit=100)  # Export 100 rows for preview
-            if df is not None and not df.empty:
-                filename = f"output/{name}_preview.csv"
-                df.to_csv(filename, index=False)
-                print(f"  ✅ Saved: {filename}")
-            else:
-                print(f"  ⚠️ No data for: {name}")
-        except Exception as e:
-            print(f"  ❌ Error exporting {name}: {e}")
-    
-    # Export row counts
-    try:
-        counts = get_table_row_counts()
-        counts_df = pd.DataFrame(list(counts.items()), columns=['table', 'row_count'])
-        counts_df.to_csv("output/table_row_counts.csv", index=False)
-        print(f"  ✅ Saved: output/table_row_counts.csv")
-    except Exception as e:
-        print(f"  ❌ Error exporting row counts: {e}")
+            df.to_csv(
+                filename,
+                index=False,
+            )
+
+            print(
+                f"   Saved: {filename}"
+            )
+
+        except Exception:
+            logger.exception(
+                "Error exporting %s",
+                name,
+            )
 
 
 if __name__ == "__main__":
-    # Run analysis
-    run_analysis()
-    
-    # Export results
-    export_results()
+    results = run_analysis()
+    export_results(results)
