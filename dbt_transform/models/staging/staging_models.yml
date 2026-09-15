@@ -38,6 +38,11 @@ models:
               to: ref('stg_customers')
               field: customer_id
 
+      - name: order_purchase_timestamp
+        description: "Timestamp when the order was purchased."
+        tests:
+          - not_null
+
       - name: order_status
         description: "Status of the order."
         tests:
@@ -56,6 +61,11 @@ models:
 
   - name: stg_order_items
     description: "Cleaned order item records. Grain: one row per order item."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - order_item_id
 
     columns:
       - name: order_id
@@ -94,11 +104,19 @@ models:
   - name: stg_order_payments
 
     description: "Cleaned payment records. Grain: one row per payment record."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - payment_sequential
     columns:
 
       - name: order_id
         tests:
           - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
 
       - name: payment_type
         tests:
@@ -109,7 +127,12 @@ models:
           - not_null
 
   - name: stg_order_reviews
-    description: "Cleaned order review records."
+    description: "Cleaned order review records. Grain: (review_id, order_id) - review_id alone is not unique."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - review_id
+            - order_id
 
     columns:
       - name: review_id
@@ -119,6 +142,9 @@ models:
       - name: order_id
         tests:
           - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
 
       - name: review_score
         tests:
@@ -133,6 +159,15 @@ models:
         tests:
           - not_null
           - unique
+
+      - name: product_category_name
+        description: "Portuguese product category name. 623 known rows have no match in stg_category_translation - known source gap, not a transform bug."
+        tests:
+          - relationships:
+              to: ref('stg_category_translation')
+              field: product_category_name
+              config:
+                severity: warn
 
 
   - name: stg_sellers

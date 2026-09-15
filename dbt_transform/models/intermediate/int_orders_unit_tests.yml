@@ -1,0 +1,126 @@
+version: 2
+
+unit_tests:
+  - name: test_int_orders_is_late_logic
+    description: "is_late: true when delivered after estimate, false when on time, null when not yet delivered."
+    model: int_orders
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - order_id: "order_late"
+            customer_id: "cust_1"
+            order_status: "DELIVERED"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_approved_at: "2018-01-01 11:00:00"
+            order_delivered_carrier_date: "2018-01-03 10:00:00"
+            order_delivered_customer_date: "2018-01-10 10:00:00"
+            order_estimated_delivery_date: "2018-01-05 00:00:00"
+          - order_id: "order_ontime"
+            customer_id: "cust_2"
+            order_status: "DELIVERED"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_approved_at: "2018-01-01 11:00:00"
+            order_delivered_carrier_date: "2018-01-02 10:00:00"
+            order_delivered_customer_date: "2018-01-04 10:00:00"
+            order_estimated_delivery_date: "2018-01-10 00:00:00"
+          - order_id: "order_pending"
+            customer_id: "cust_3"
+            order_status: "SHIPPED"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_approved_at: "2018-01-01 11:00:00"
+            order_delivered_carrier_date: "2018-01-02 10:00:00"
+            order_delivered_customer_date: null
+            order_estimated_delivery_date: "2018-01-10 00:00:00"
+      - input: ref('int_order_items')
+        rows: []
+      - input: ref('int_order_payments')
+        rows: []
+      - input: ref('int_order_reviews')
+        rows: []
+      - input: ref('int_customer_orders')
+        rows:
+          - order_id: "order_late"
+            customer_id: "cust_1"
+            customer_unique_id: "u1"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_status: "DELIVERED"
+            is_qualifying_order: true
+            customer_order_number: 1
+          - order_id: "order_ontime"
+            customer_id: "cust_2"
+            customer_unique_id: "u2"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_status: "DELIVERED"
+            is_qualifying_order: true
+            customer_order_number: 1
+          - order_id: "order_pending"
+            customer_id: "cust_3"
+            customer_unique_id: "u3"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_status: "SHIPPED"
+            is_qualifying_order: true
+            customer_order_number: 1
+    expect:
+      rows:
+        - order_id: "order_late"
+          is_late: true
+        - order_id: "order_ontime"
+          is_late: false
+        - order_id: "order_pending"
+          is_late: null
+
+  - name: test_int_orders_customer_type_logic
+    description: "customer_type: new for the first qualifying order, returning for later ones, unknown when the customer has no qualifying orders."
+    model: int_orders
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - order_id: "o1"
+            customer_id: "c1"
+            order_status: "DELIVERED"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+          - order_id: "o2"
+            customer_id: "c1"
+            order_status: "DELIVERED"
+            order_purchase_timestamp: "2018-02-01 10:00:00"
+          - order_id: "o3"
+            customer_id: "c2"
+            order_status: "CANCELED"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+      - input: ref('int_order_items')
+        rows: []
+      - input: ref('int_order_payments')
+        rows: []
+      - input: ref('int_order_reviews')
+        rows: []
+      - input: ref('int_customer_orders')
+        rows:
+          - order_id: "o1"
+            customer_id: "c1"
+            customer_unique_id: "u1"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_status: "DELIVERED"
+            is_qualifying_order: true
+            customer_order_number: 1
+          - order_id: "o2"
+            customer_id: "c1"
+            customer_unique_id: "u1"
+            order_purchase_timestamp: "2018-02-01 10:00:00"
+            order_status: "DELIVERED"
+            is_qualifying_order: true
+            customer_order_number: 2
+          - order_id: "o3"
+            customer_id: "c2"
+            customer_unique_id: "u2"
+            order_purchase_timestamp: "2018-01-01 10:00:00"
+            order_status: "CANCELED"
+            is_qualifying_order: false
+            customer_order_number: null
+    expect:
+      rows:
+        - order_id: "o1"
+          customer_type: "new"
+        - order_id: "o2"
+          customer_type: "returning"
+        - order_id: "o3"
+          customer_type: "unknown"
