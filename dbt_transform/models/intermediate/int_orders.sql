@@ -51,7 +51,7 @@ final AS
         orders.order_delivered_customer_date,
         orders.order_estimated_delivery_date,
         order_items.order_item_count,
-        order_items.order_gmv,
+        COALESCE(order_items.order_gmv, 0) AS order_gmv,
         order_items.total_freight_value,
         order_items.order_total_value,
         order_payments.total_payment_value,

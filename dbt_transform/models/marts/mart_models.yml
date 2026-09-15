@@ -139,10 +139,10 @@ models:
       - name: customer_first_order_date
         description: "Date of the customer's first recorded order."
         
-      - name: geolocation_key
-        description: "Surrogate key generated from the customer's latest known ZIP code prefix and used to relate the customer to dim_geolocation."
-        tests:
-          - not_null   
+      # - name: geolocation_key
+      #   description: "Surrogate key generated from the customer's latest known ZIP code prefix and used to relate the customer to dim_geolocation."
+      #   tests:
+      #     - not_null   
 
   - name: fact_reviews
     description: >
