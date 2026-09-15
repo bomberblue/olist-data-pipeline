@@ -22,5 +22,8 @@ jupyter==1.1.1
 dagster==1.13.20
 dagster-webserver==1.13.20
 
+#Visualization
+matplotlib==3.11.1
+
 # Config / credentials
 python-dotenv==1.2.3
