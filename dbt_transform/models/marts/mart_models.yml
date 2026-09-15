@@ -1,0 +1,517 @@
+version: 2
+
+models:
+  - name: dim_geolocation
+    description: "Dimension table containing geolocation attributes"
+
+    columns:
+      - name: geolocation_key
+        description: "Surrogate key generated from the ZIP code prefix using an MD5 hash."
+        data_tests:
+          - not_null
+          - unique  
+          
+      - name: zip_code_prefix
+        description: "Brazilian ZIP code prefix used to identify the geographic area."
+        data_tests:
+          - not_null
+          - unique 
+
+      - name: longitude
+        description: "Longitude coordinate associated with the ZIP code prefix."
+
+      - name: latitude
+        description: "latitude coordinate associated with the ZIP code prefix." 
+      
+      - name: city
+        description: "City associated with the ZIP code prefix.."
+
+      - name: state
+        description: "State associated with the ZIP code prefix." 
+        
+      - name: Region
+        description: "Brazilian geographic region derived from the state abbreviation."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values:
+                - North
+                - Northeast
+                - Central-West
+                - Southeast
+                - South
+                - Unknown
+
+  - name: dim_date
+
+    description: "Date dimension containing one row per calendar date from 2016 through
+                  2018. Includes calendar attributes, weekend and period-end indicators,
+                  and holiday information."
+    columns:
+      - name: date_key
+        description: "Surrogate date key"
+        data_tests:
+          - not_null
+          - unique
+      
+      - name: date
+        description: "Calendar date"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: day
+        description: "Day of the month."
+      
+      - name: day_of_week
+        description: "Full name of the day of the week."
+      
+      - name: week
+        description: "Week number of the year."
+
+      - name: month
+        description: "Month number from 1 to 12"
+
+      -  name: month_name        
+         description: "Full name of the month."
+        
+      - name: quarter
+        description: "Quarter of the year from 1 to 4."
+
+      - name: year
+        description: "Calendar year."
+
+      - name: is_weekend
+        description: "Indicates whether the date falls on Saturday or Sunday."
+
+      - name: is_month_end
+        description: "Indicates whether the date is the last day of the month."
+
+      - name: is_quarter_end
+        description: "Indicates whether the date is the last day of the quarter."
+
+      - name: is_year_end
+        description: "Indicates whether the date is the last day of the year."
+
+      - name: is_holiday
+        description: "Indicates whether the date is a recognized holiday. NULL is used  
+        for 2016 because holiday data is not available for that year."
+      
+      - name: holiday_name
+        description: "Name of the holiday associated with the date."
+
+      - name: holiday_type
+        description: "Type or classification of the holiday."
+
+      - name: holiday_weekday
+        description: "Weekday recorded in the holiday calendar."
+
+  - name: dim_customer
+    description: "Customer dimension containing one record per unique customer."
+    
+    columns:
+      - name: customer_key
+        description: "Surrogate key generated from customer_unique_id using an MD5 hash."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Olist customer identifier associated with the customer record for an order"
+        data_tests:
+          - not_null
+      
+      - name: customer_unique_id
+        description: "Persistent customer identifier used to identify a unique customer across multiple orders."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_zip_code_prefix
+        description: "ZIP code prefix representing the customer's latest known location."
+
+      - name: customer_city
+        description: "City representing the customer's latest known location."
+        
+      - name: customer_state
+        description: "Brazilian state representing the customer's latest known location."
+
+      - name: customer_first_order_date
+        description: "Date of the customer's first recorded order."
+        
+      - name: geolocation_key
+        description: "Foreign key to dim_geolocation based on the customer's latest known ZIP code prefix. NULL when no corresponding geolocation record exists."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geolocation')
+                field: geolocation_key
+
+  - name: fact_reviews
+    description: "Fact table for order reviews. One row per review-order combination (review_id + order_id), enriched with order and customer surrogate keys."
+    columns:
+      - name: review_order_key
+        description: "Surrogate key for the review-order combination, generated from review_id and order_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: review_key
+        description: "Surrogate key generated from review_id."
+
+      - name: order_key
+        description: "Surrogate key generated from order_id."
+        data_data_tests:
+          - relationships:
+              arguments:
+                to: ref('fact_orders')
+                field: order_key
+
+      - name: customer_key
+        description: "Customer surrogate key joined through the order."
+        data_data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: review_date_key
+        description: "Integer date key in YYYYMMDD format derived from review_creation_date."
+        data_data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: review_id
+        description: "Source review identifier."
+
+      - name: review_score
+        description: "Review rating score submitted by the customer."
+
+      - name: review_comment_title
+        description: "Title of the review comment."
+
+      - name: review_comment_message
+        description: "Body text of the review comment."
+
+      - name: review_creation_date
+        description: "Date/time when the review was created."
+
+      - name: review_answer_timestamp
+        description: "Timestamp associated with the review answer."
+
+  - name: fct_customer_rfm
+    description: "Customer-level RFM fact table. One row per customer, using 2018-10-18 as
+      the analysis date. Recency and monetary scores are percentile-based,
+      frequency uses business-defined bands, and customers are assigned to an
+      RFM segment."
+    columns:
+      - name: customer_key
+        description: "Customer surrogate key; grain of the model is one row per customer_key."
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: analysis_date
+        description: "Fixed RFM analysis date: 2018-10-18."
+
+      - name: recency
+        description: "Number of days between the customer's most recent qualifying order and the analysis date."
+
+      - name: frequency
+        description: "Count of distinct qualifying orders for the customer."
+
+      - name: monetary
+        description: "Total gross merchandise value from qualifying orders for the customer."
+
+      - name: recency_score
+        description: "Recency score from 1 to 5 based on percentile rank, where 5 represents
+          the most recently active customers and 1 the least recently active."
+
+      - name: frequency_score
+        description: "Frequency score based on order count: 1 order = 1, 2 orders = 2,
+          3 orders = 3, and 4 or more orders = 4."
+
+      - name: monetary_score
+        description: "Monetary score from 1 to 5 based on percentile rank, where 5 represents
+          the highest-value customers and 1 the lowest-value customers."
+
+      - name: rfm_code
+        description: "Concatenation of recency_score, frequency_score, and monetary_score."
+
+      - name: rfm_total_score
+        description: "Sum of recency_score, frequency_score, and monetary_score."
+
+      - name: customer_segment
+        description: "RFM segment assigned by business rules, including Champions, Loyal Customers,
+          Big Spenders, Recent One-Time Customers, Potential Loyalists, At Risk,
+          Needs Attention, Lost Customers, or Other."
+
+  - name: dim_product
+    description: "Product dimension built from staged product data and category translations,
+      including the original Portuguese category and its English translation."
+    columns:
+      - name: product_key
+        description: "Surrogate product key generated from product_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: product_id
+        description: "Source product identifier."
+
+      - name: product_category_name
+        description: "Original product category name."
+
+      - name: product_category_name_english
+        description: "English translation of the product category name."
+
+      - name: product_name_length
+        description: "Length of the product name."
+
+      - name: product_description_length
+        description: "Length of the product description."
+
+      - name: product_photos_qty
+        description: "Number of product photos."
+
+      - name: product_weight_g
+        description: "Product weight in grams."
+
+      - name: product_height_cm
+        description: "Product height in centimetres."
+
+      - name: product_length_cm
+        description: "Product length in centimetres."
+
+      - name: product_width_cm
+        description: "Product width in centimetres."
+
+  - name: dim_seller
+    description: "Seller dimension containing seller location attributes plus surrogate seller
+      and geolocation keys."
+    
+    columns:
+      - name: seller_key
+        description: "Surrogate seller key generated from seller_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: seller_id
+        description: "Source seller identifier."
+
+      - name: seller_zip_code_prefixrefix
+        description: "Seller ZIP/postal-code prefix."
+
+      - name: seller_city
+        description: "Seller city."
+
+      - name: seller_state
+        description: "Seller state."
+
+      - name: geolocation_key
+        description: "Foreign key to dim_geolocation based on the seller ZIP code. NULL when no corresponding geolocation record exists."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geolocation')
+                field: geolocation_key
+                
+  - name: fact_order_items
+    description: "Order-item fact table. One row per order item (order_id + order_item_id),
+      enriched with order, product, seller, and date surrogate keys."
+    columns:
+      - name: order_item_key
+        description: "Surrogate key for an order item, generated from order_id and order_item_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_key
+        description: "Surrogate order key generated from order_id."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fact_orders')
+                field: order_key
+
+      - name: product_key
+        description: "Product surrogate key joined from dim_product."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+
+      - name: seller_key
+        description: "Seller surrogate key joined from dim_seller."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_seller')
+                field: seller_key
+
+      - name: order_date_key
+        description: "Integer date key in YYYYMMDD format derived from order_purchase_timestamp."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: order_item_id
+        description: "Item sequence identifier within the order."
+
+      - name: product_id
+        description: "Source product identifier."
+
+      - name: seller_id
+        description: "Source seller identifier."
+
+      - name: price
+        description: "Product price for the order item."
+
+      - name: freight_value
+        description: "Freight value for the order item."
+
+      - name: shipping_limit_date
+        description: "Shipping limit date/time for the order item."
+
+  - name: fact_orders
+    description: "Order-level fact table. One row per order_id, enriched with the customer
+      surrogate key, order metrics, delivery metrics, review metrics, and customer-type attributes."
+    columns:
+      - name: order_key
+        description: "Surrogate order key generated from order_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Source order identifier."
+
+      - name: customer_key
+        description: "Customer surrogate key joined from dim_customer."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: order_date_key
+        description: "Integer date key in YYYYMMDD format derived from order_purchase_timestamp."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: order_status
+        description: "Current/final order status."
+
+      - name: order_purchase_timestamp
+        description: "Timestamp when the order was purchased."
+
+      - name: order_approved_at
+        description: "Timestamp when the order was approved."
+
+      - name: order_delivered_carrier_date
+        description: "Timestamp when the order was handed to the carrier."
+
+      - name: order_delivered_customer_date
+        description: "Timestamp when the order was delivered to the customer."
+
+      - name: order_estimated_delivery_date
+        description: "Estimated delivery date for the order."
+
+      - name: number_of_items
+        description: "Total number of items in the order."
+
+      - name: gross_merchandise_value
+        description: "Sum of product prices for all items in the order before discounts or promotions."
+
+      - name: total_freight_value
+        description: "Total freight value across all items in the order."
+
+      - name: order_total_value
+        description: "Total order value across all items in the order."
+
+      - name: total_payment_value
+        description: "Total payment value associated with the order."
+
+      - name: delivery_days
+        description: "Number of days between order purchase and customer delivery."
+
+      - name: estimated_delivery_days
+        description: "Number of days estimated for delivery."
+
+      - name: is_late
+        description: "Flag indicating whether the order was delivered late."
+
+      - name: average_review_score
+        description: "Average review score for the order."
+
+      - name: review_count
+        description: "Number of reviews associated with the order."
+
+      - name: latest_review_date
+        description: "Date of the most recent review associated with the order."
+
+      - name: customer_type
+        description: "Customer classification, such as new or returning."
+
+      - name: first_order_timestamp
+        description: "Timestamp of the customer's first order."
+
+  - name: fact_payments
+    description: " Payment fact table. One row per payment record (order_id + payment_sequential),
+      enriched with order, customer, and order-date surrogate keys."
+    
+    columns:
+      - name: payment_key
+        description: "Surrogate payment key generated from order_id and payment_sequential."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_key
+        description: "Surrogate order key generated from order_id."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fact_orders')
+                field: order_key
+
+      - name: customer_key
+        description: "Customer surrogate key joined through the order."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: order_date_key
+        description: "Integer date key in YYYYMMDD format derived from order_purchase_timestamp."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: payment_sequential
+        description: "Sequence number of the payment within an order."
+
+      - name: payment_type
+        description: "Payment method/type."
+
+      - name: payment_installments
+        description: "Number of payment installments."
+
+      - name: payment_value
+        description: "Value of the payment."
