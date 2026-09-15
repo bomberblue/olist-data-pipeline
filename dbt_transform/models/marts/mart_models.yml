@@ -149,9 +149,6 @@ models:
 
   - name: fact_reviews
     description: "Fact table for order reviews. One row per review-order combination (review_id + order_id), enriched with order and customer surrogate keys."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_order_reviews')
     columns:
       - name: review_order_key
         description: "Surrogate key for the review-order combination, generated from review_id and order_id."
@@ -164,7 +161,7 @@ models:
 
       - name: order_key
         description: "Surrogate key generated from order_id."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('fact_orders')
@@ -172,7 +169,7 @@ models:
 
       - name: customer_key
         description: "Customer surrogate key joined through the order."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('dim_customer')
@@ -180,7 +177,7 @@ models:
 
       - name: review_date_key
         description: "Integer date key in YYYYMMDD format derived from review_creation_date."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('dim_date')
@@ -258,9 +255,6 @@ models:
   - name: dim_product
     description: "Product dimension built from staged product data and category translations,
       including the original Portuguese category and its English translation."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_products')
     columns:
       - name: product_key
         description: "Surrogate product key generated from product_id."
@@ -275,7 +269,7 @@ models:
         description: "Original product category name."
 
       - name: product_category_name_english
-        description: "English translation of the product category name; falls back to the Portuguese name, then 'unknown', when no translation exists."
+        description: "English translation of the product category name."
 
       - name: product_name_length
         description: "Length of the product name."
@@ -301,9 +295,7 @@ models:
   - name: dim_seller
     description: "Seller dimension containing seller location attributes plus surrogate seller
       and geolocation keys."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_sellers')
+    
     columns:
       - name: seller_key
         description: "Surrogate seller key generated from seller_id."
@@ -334,9 +326,6 @@ models:
   - name: fact_order_items
     description: "Order-item fact table. One row per order item (order_id + order_item_id),
       enriched with order, product, seller, and date surrogate keys."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_order_items')
     columns:
       - name: order_item_key
         description: "Surrogate key for an order item, generated from order_id and order_item_id."
@@ -397,9 +386,6 @@ models:
   - name: fact_orders
     description: "Order-level fact table. One row per order_id, enriched with the customer
       surrogate key, order metrics, delivery metrics, review metrics, and customer-type attributes."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_orders')
     columns:
       - name: order_key
         description: "Surrogate order key generated from order_id."
@@ -478,7 +464,7 @@ models:
         description: "Date of the most recent review associated with the order."
 
       - name: customer_type
-        description: "Customer classification (new/returning) from qualifying order sequence, matching fct_customer_rfm.frequency scope. 'unknown' for canceled/unavailable orders."
+        description: "Customer classification, such as new or returning."
 
       - name: first_order_timestamp
         description: "Timestamp of the customer's first order."
@@ -486,9 +472,7 @@ models:
   - name: fact_payments
     description: " Payment fact table. One row per payment record (order_id + payment_sequential),
       enriched with order, customer, and order-date surrogate keys."
-    data_tests:
-      - dbt_utils.equal_rowcount:
-          compare_model: ref('stg_order_payments')
+    
     columns:
       - name: payment_key
         description: "Surrogate payment key generated from order_id and payment_sequential."

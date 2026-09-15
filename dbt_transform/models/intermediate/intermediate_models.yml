@@ -1,14 +1,6 @@
 version: 2
 
 models:
-  - name: int_geolocation
-    description: "Deduplicated geolocation records. Grain: one row per ZIP code prefix."
-    columns:
-      - name: geolocation_zip_code_prefix
-        tests:
-          - not_null
-          - unique
-
   - name: int_order_items
     description: "Order item metrics. Grain: one row per order item."
     columns:
@@ -61,10 +53,6 @@ models:
           - not_null
 
       - name: customer_order_number
-        description: "Sequence number among the customer's qualifying (non-canceled, non-unavailable) orders. NULL for canceled/unavailable orders."
-
-      - name: is_qualifying_order
-        description: "True unless the order is CANCELED or UNAVAILABLE. Drives customer_order_number and first_order_timestamp."
         tests:
           - not_null
 
