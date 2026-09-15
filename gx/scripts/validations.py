@@ -24,6 +24,9 @@ TABLE_NAMES = {
         "products": "stg_products",
         "sellers": "stg_sellers",
         "geolocation": "stg_geolocation",
+        # holidays come from raw_holidays_2017/2018 via REST API tap, unioned
+        # here - no single raw table, so staging-only for now.
+        "holidays": "stg_holiday_calendar",
     },
 }
 
@@ -107,6 +110,14 @@ ORDER_STATUSES = [
 # we will monitor first and add a check to ensure it's less than 0.01%
 PAYMENT_TYPES = ["credit_card", "boleto", "voucher", "debit_card"]
 
+# only NATIONAL holidays exist in 2017/2018 - observation, not critical,
+# in case state holidays get added later.
+HOLIDAY_TYPES = ["NATIONAL"]
+HOLIDAY_WEEKDAYS = [
+    "DOMINGO", "SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA",
+    "QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO",
+]
+
 # having the baseline helps to detect problems where only a part of CSV was loaded
 RAW_ROW_BASELINES = {
     "customers": 99_441,
@@ -128,6 +139,7 @@ STAGING_ROW_BASELINES = {
     "order_items": 112_650,
     "payments": 103_886,
     "reviews": 99_224,
+    "holidays": 26,
     "products": 32_951,
     "sellers": 3_095,
     "geolocation": 1_000_163,
@@ -135,9 +147,20 @@ STAGING_ROW_BASELINES = {
 
 ROW_BASELINES_BY_LAYER = {"raw": RAW_ROW_BASELINES, "staging": STAGING_ROW_BASELINES}
 
-MART_TABLE_NAME = "fact_orders"
-MART_ROW_BASELINE = 99_441
-MART_ORDER_TOTAL_VALUE_BASELINE = 15_843_553.24
+# per-mart smoke test: row count + a value-column sum vs a baseline (+/- 5%).
+# not a substitute for dbt's grain/FK/relationship tests.
+MART_SANITY_CHECKS = {
+    "fact_orders": {
+        "row_baseline": 99_441,
+        "value_column": "order_total_value",
+        "value_baseline": 15_843_553.24,
+    },
+    "fact_payments": {
+        "row_baseline": 103_886,
+        "value_column": "payment_value",
+        "value_baseline": 16_008_872.12,
+    },
+}
 
 # base dataset names per layer; env (dev/staging/prod) adjusts these via resolve_dataset()
 DATASET_NAMES = {
@@ -215,10 +238,10 @@ def load_frames(config):
 
     return frames
 
-def load_mart_frame(config):
+def load_mart_frame(config, table_name):
     dataset = config["datasets"]["mart"]
     engine = create_engine(f"bigquery://{config['project_id']}/{dataset}")
-    query = f"SELECT * FROM `{config['project_id']}.{dataset}.{MART_TABLE_NAME}`"
+    query = f"SELECT * FROM `{config['project_id']}.{dataset}.{table_name}`"
     return pd.read_sql(query, engine)
 
 # normalise the validation types to ensure that GX can process them
@@ -346,6 +369,11 @@ def build_expectation_suites(config):
             E.ExpectColumnValuesToBeInSet(column="geolocation_state", value_set=BRAZIL_STATES),
             E.ExpectColumnValuesToMatchRegex(column="geolocation_zip_code_prefix", regex=r"^\d{5}$"),
         ],
+        "holidays": [
+            E.ExpectColumnValuesToNotBeNull(column="hol_date"),
+            E.ExpectColumnValuesToNotBeNull(column="hol_name"),
+            E.ExpectColumnValuesToBeInSet(column="hol_day", value_set=HOLIDAY_WEEKDAYS),
+        ],
         "order_reconciliation": [],
     }
 
@@ -405,6 +433,9 @@ def build_expectation_suites(config):
                 mostly=0.60,
             ),
         ],
+        "holidays": [
+            E.ExpectColumnValuesToBeInSet(column="hol_type", value_set=HOLIDAY_TYPES),
+        ],
         "order_reconciliation": [
             E.ExpectColumnValuesToBeInSet(column="payment_matches_items", value_set=[True], mostly=0.99),
         ],
@@ -422,16 +453,16 @@ def build_expectation_suites(config):
 
     return critical_expectations, observation_expectations
 
-def build_mart_expectations():
+def build_mart_expectations(mart_config):
     return [
         E.ExpectTableRowCountToBeBetween(
-            min_value=int(MART_ROW_BASELINE * 0.95),
-            max_value=int(MART_ROW_BASELINE * 1.05),
+            min_value=int(mart_config["row_baseline"] * 0.95),
+            max_value=int(mart_config["row_baseline"] * 1.05),
         ),
         E.ExpectColumnSumToBeBetween(
-            column="order_total_value",
-            min_value=MART_ORDER_TOTAL_VALUE_BASELINE * 0.95,
-            max_value=MART_ORDER_TOTAL_VALUE_BASELINE * 1.05,
+            column=mart_config["value_column"],
+            min_value=mart_config["value_baseline"] * 0.95,
+            max_value=mart_config["value_baseline"] * 1.05,
         ),
     ]
 
@@ -558,36 +589,37 @@ def summarize_failures(validation_results):
     return gx_details, failed_details
 
 
-def run_mart_sanity_check(context, config):
+def run_mart_sanity_check(context, config, table_name):
+    mart_config = MART_SANITY_CHECKS[table_name]
     data_source = context.data_sources.add_or_update_pandas(name="olist_mart_dataframes")
 
     try:
-        asset = data_source.get_asset(f"{MART_TABLE_NAME}_dataframe_asset")
+        asset = data_source.get_asset(f"{table_name}_dataframe_asset")
     except LookupError:
-        asset = data_source.add_dataframe_asset(name=f"{MART_TABLE_NAME}_dataframe_asset")
+        asset = data_source.add_dataframe_asset(name=f"{table_name}_dataframe_asset")
     try:
-        batch_definition = asset.get_batch_definition(f"{MART_TABLE_NAME}_whole_dataframe")
+        batch_definition = asset.get_batch_definition(f"{table_name}_whole_dataframe")
     except KeyError:
-        batch_definition = asset.add_batch_definition_whole_dataframe(f"{MART_TABLE_NAME}_whole_dataframe")
+        batch_definition = asset.add_batch_definition_whole_dataframe(f"{table_name}_whole_dataframe")
 
-    suite = gx.ExpectationSuite(name=f"{MART_TABLE_NAME}_sanity_suite")
-    for expectation in build_mart_expectations():
+    suite = gx.ExpectationSuite(name=f"{table_name}_sanity_suite")
+    for expectation in build_mart_expectations(mart_config):
         suite.add_expectation(expectation.copy(deep=True))
     suite = context.suites.add_or_update(suite)
 
     validation = context.validation_definitions.add_or_update(
-        gx.ValidationDefinition(data=batch_definition, suite=suite, name=f"{MART_TABLE_NAME}_sanity_validation")
+        gx.ValidationDefinition(data=batch_definition, suite=suite, name=f"{table_name}_sanity_validation")
     )
     checkpoint = context.checkpoints.add_or_update(
         gx.Checkpoint(
-            name=f"{MART_TABLE_NAME}_sanity_checkpoint",
+            name=f"{table_name}_sanity_checkpoint",
             validation_definitions=[validation],
             actions=[gx.checkpoint.UpdateDataDocsAction(name="update_data_docs")],
             result_format={"result_format": "SUMMARY", "partial_unexpected_count": 10},
         )
     )
 
-    mart_frame = load_mart_frame(config)
+    mart_frame = load_mart_frame(config, table_name)
     checkpoint_result = checkpoint.run(batch_parameters={"dataframe": mart_frame})
     result = next(iter(checkpoint_result.run_results.values()))
     return bool(result.success), result
@@ -602,7 +634,11 @@ def run_gx_validations():
     results, summary = run_validations(checkpoints, validations, frames)
     details, failed = summarize_failures(results)
 
-    mart_success, mart_result = run_mart_sanity_check(context, config)
+    mart_results = {
+        table_name: run_mart_sanity_check(context, config, table_name)
+        for table_name in MART_SANITY_CHECKS
+    }
+    mart_sanity_success = all(success for success, _ in mart_results.values())
 
     critical_failures = summary[(summary["group"] == "critical") & (~summary["success"])]
     observation_failures = summary[(summary["group"] == "observation") & (~summary["success"])]
@@ -612,8 +648,9 @@ def run_gx_validations():
         raise RuntimeError("Critical GX checks failed. Review critical_failures and failed_details.")
 
     raise_on_mart_failure = os.getenv("GX_RAISE_ON_MART_FAILURE", "false").lower() == "true"
-    if raise_on_mart_failure and not mart_success:
-        raise RuntimeError("Mart sanity check failed. Review mart_result for details.")
+    if raise_on_mart_failure and not mart_sanity_success:
+        failed_marts = [table_name for table_name, (success, _) in mart_results.items() if not success]
+        raise RuntimeError(f"Mart sanity check failed for: {', '.join(failed_marts)}. Review mart_results for details.")
 
     return {
         "summary": summary,
@@ -621,6 +658,6 @@ def run_gx_validations():
         "coercion_failures": coercion_failures,
         "critical_failures": critical_failures,
         "observation_failures": observation_failures,
-        "mart_sanity_success": mart_success,
-        "mart_result": mart_result,
+        "mart_sanity_success": mart_sanity_success,
+        "mart_results": mart_results,
     }
