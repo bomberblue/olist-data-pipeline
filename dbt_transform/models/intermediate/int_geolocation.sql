@@ -6,7 +6,7 @@
 {{ config(materialized='view') }}
 
 SELECT
-    geolocation_zip_code_prefix,
+    CAST(geolocation_zip_code_prefix AS STRING) AS geolocation_zip_code_prefix,
     latitude,
     longitude,
     city,

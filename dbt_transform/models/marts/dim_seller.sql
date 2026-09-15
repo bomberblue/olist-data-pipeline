@@ -9,10 +9,13 @@
  ) }}
 
 SELECT
-    to_hex(md5(CAST(seller_id AS string))) AS seller_key,
-    seller_id,
-    seller_zip_code_prefix,
-    seller_city,
-    seller_state,
-    to_hex(md5(CAST(seller_zip_code_prefix AS string))) AS geolocation_key
-FROM {{ ref('stg_sellers') }}
+    to_hex(md5(CAST(seller.seller_id AS string))) AS seller_key,
+    seller.seller_id,
+    seller.seller_zip_code_prefix,
+    seller.seller_city,
+    seller.seller_state,
+    geolocation.geolocation_key
+FROM {{ ref('stg_sellers') }} AS seller
+LEFT JOIN {{ ref('dim_geolocation') }} AS geolocation
+    ON seller.seller_zip_code_prefix = geolocation.zip_code_prefix
+ 

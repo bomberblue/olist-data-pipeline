@@ -178,7 +178,7 @@ SELECT
             THEN 'Recent One-Time Customers'
 
         WHEN recency_score >= 4
-         AND frequency_score BETWEEN 2 AND 3
+         AND frequency_score = 2
             THEN 'Potential Loyalists'
 
         WHEN recency_score BETWEEN 2 AND 3
