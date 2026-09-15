@@ -20,17 +20,25 @@ The whole pipeline is orchestrated by Dagster.
 ├── requirements.txt
 ├── .env.example          # copy to .env and fill in; .env itself is git-ignored
 ├── data/                  # the 9 Olist CSVs (git-ignored, not committed)
-├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config (owner: A)
+├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config
 ├── dbt_transform/
 │   ├── models/
-│   │   ├── staging/        # stg_* models (owner: B)
-│   │   └── marts/          # fact_*, dim_* models (owner: B)
+│   │   ├── staging/        # stg_* models
+│   │   └── marts/          # fact_*, dim_* models
 │   ├── macros/               # e.g. generate_schema_name override for marts dataset
-│   └── tests/               # dbt + Great Expectations suites (owner: C)
+│   └── tests/               # dbt + Great Expectations suites
+├── gx/
+│   ├── great_expectations.yml   # GX context config (tracked)
+│   ├── scripts/
+│   │   └── validations.py       # reusable GX validation logic
+│   └── uncommitted/              # generated suites/checkpoints/Data Docs (git-ignored)
+├── scripts/
+│   └── run_gx_validation_gx.py  # CLI entrypoint an orchestrator triggers
 ├── orchestration/
-│   └── dagster/              # Dagster assets and schedule (owner: E)
+│   └── dagster/              # Dagster assets and schedule
 └── notebooks/
-    └── analysis/               # Jupyter notebooks (owner: D)
+    ├── olist_GX.ipynb           # interactive development copy of gx/scripts/validations.py
+    └── analysis/               # Jupyter notebooks
 ```
 
 ## Setup
@@ -73,7 +81,7 @@ The loader in `meltano_ingestion/meltano.yml` references these variables. The in
 
 ### 4. Data
 
-Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
+Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step reads from here directly.
 
 
 ### 5. GCP authentication
@@ -223,3 +231,30 @@ The REST API configuration in `meltano.yml` is:
 
 
 - meltano --env-file ../.env run tap-rest-api-msdk target-bigquery  # Extract the REST API data and load it into BigQuery.
+
+
+### 8. Great Expectations validations
+
+The GX checks live under `gx/` (context config, generated suites/checkpoints) and `gx/scripts/validations.py` (the reusable validation logic). `notebooks/olist_GX.ipynb` is the interactive development copy of the same logic; `scripts/run_gx_validation_gx.py` is the CLI entrypoint an orchestrator (or you, locally) actually runs.
+
+Run it from the repository root, with the `olist-pipeline` conda environment active:
+
+```bash
+GX_ENV=prod GX_DATA_LAYER=staging GX_RAISE_ON_CRITICAL_FAILURE=true python -m scripts.run_gx_validation_gx
+```
+
+Environment variables (all optional; defaults shown):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GX_ENV` | `dev` | `dev` / `staging` / `prod` — selects which dataset suffix to read. `prod` reads the bare dataset name (e.g. `olist_staging`); any other value reads `<dataset>_<env>` (e.g. `olist_staging_dev`). |
+| `GX_DATA_LAYER` | `staging` | `raw` or `staging` — which layer's tables to validate. |
+| `GX_SOURCE_MODE` | `bigquery` | `bigquery` or `csv`. `csv` reads the local files in `data/` instead of BigQuery, and only works with `GX_DATA_LAYER=raw`. |
+| `GX_CONTEXT_MODE` | `file` | `file` persists suites/checkpoints/Data Docs under `gx/`; `ephemeral` writes nothing to disk. |
+| `GX_RAISE_ON_CRITICAL_FAILURE` | `false` | Set `true` to make a critical check failure exit non-zero. Required for a critical failure to actually block an orchestrator/CI run — without it the script always exits `0`. |
+| `GX_RAISE_ON_MART_FAILURE` | `false` | Set `true` to also block on the mart sanity check (row count / revenue sum) failing. |
+| `GOOGLE_CLOUD_PROJECT` | `olist-data-pipeline-507001` | Same variable as the root `.env` (step 3). |
+
+Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/data_docs/` on every run — open `gx/uncommitted/data_docs/local_site/index.html` locally to inspect results.
+
+Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
