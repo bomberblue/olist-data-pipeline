@@ -140,15 +140,15 @@ models:
         description: "Date of the customer's first recorded order."
         
       - name: geolocation_key
-        description: "Foreign key to dim_geolocation based on the customer's latest known ZIP code prefix. NULL when no corresponding geolocation record exists.
+        description: "Foreign key to dim_geolocation based on the customer's latest known ZIP code prefix. NULL when no corresponding geolocation record exists."
         data_tests:
           - relationships:
-            arguments:
-              to: ref('dim_geolocation')
-              field: geolocation_key
+              arguments:
+                to: ref('dim_geolocation')
+                field: geolocation_key
+
   - name: fact_reviews
-    description: "Fact table for order reviews. One row per review-order combination
-      (review_id + order_id), enriched with order and customer surrogate keys."
+    description: "Fact table for order reviews. One row per review-order combination (review_id + order_id), enriched with order and customer surrogate keys."
     columns:
       - name: review_order_key
         description: "Surrogate key for the review-order combination, generated from review_id and order_id."
@@ -295,6 +295,7 @@ models:
   - name: dim_seller
     description: "Seller dimension containing seller location attributes plus surrogate seller
       and geolocation keys."
+    
     columns:
       - name: seller_key
         description: "Surrogate seller key generated from seller_id."
@@ -316,15 +317,14 @@ models:
 
       - name: geolocation_key
         description: "Foreign key to dim_geolocation based on the seller ZIP code. NULL when no corresponding geolocation record exists."
-        data_data_tests
+        data_tests:
           - relationships:
               arguments:
                 to: ref('dim_geolocation')
                 field: geolocation_key
-                - name: geolocation_key
-  
-    - name: fact_order_items
-      description: "Order-item fact table. One row per order item (order_id + order_item_id),
+                
+  - name: fact_order_items
+    description: "Order-item fact table. One row per order item (order_id + order_item_id),
       enriched with order, product, seller, and date surrogate keys."
     columns:
       - name: order_item_key
