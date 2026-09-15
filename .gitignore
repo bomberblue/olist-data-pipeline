@@ -12,5 +12,6 @@ notebooks/analysis/output/
 notebooks/analysis/artifacts/
 .ipynb_checkpoints/
 **/.env
+output/
 
  

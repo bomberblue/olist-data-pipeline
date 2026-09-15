@@ -235,19 +235,27 @@ The REST API configuration in `meltano.yml` is:
 
 ### 8. Analysis setup.
 
-Add a .env file under the notebooks/analysis folder with below details
-# GCP Configuration
+- Add a .env file under the notebooks/analysis folder with below details
+
+--GCP Configuration--
+
 PROJECT_ID=olist-data-pipeline-507001
 DATASET=olist_mart
 
-# DuckDB Performance Settings
+--DuckDB Performance Settings--
+
 DUCKDB_MEMORY_LIMIT=4GB
 DUCKDB_THREADS=4
 
-# Pandas Display Settings
+--Pandas Display Settings--
+
 PD_MAX_ROWS=100
 PD_MAX_COLUMNS=20
 
-# Analysis
+--Analysis--
+
 RFM_TOP_CUSTOMERS_LIMIT=100
 OUTPUT_DIR=output
+
+- Run in the terminal "python analysis.py && python check_csvs.py && python visualizations.py"
+

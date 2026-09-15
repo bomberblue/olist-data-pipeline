@@ -109,9 +109,9 @@ def load_table_to_duckdb(
             pass
 
     logger.info(
-        "Loaded %s into DuckDB: %,d rows",
-        table,
-        len(df),
+    "Loaded %s into DuckDB: %s rows",
+    table,
+    f"{len(df):,}",
     )
 
     return len(df)
