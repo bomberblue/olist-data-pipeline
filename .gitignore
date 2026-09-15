@@ -8,4 +8,11 @@ logs/
 data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
- 
+
+# these regenerate on every run, including fresh random ids with no
+# logical change
+gx/expectations/
+gx/validation_definitions/
+gx/checkpoints/
+gx/uncommitted/
+gx/great_expectations.yml
