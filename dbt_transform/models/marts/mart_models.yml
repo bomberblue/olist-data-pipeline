@@ -7,13 +7,13 @@ models:
     columns:
       - name: geolocation_key
         description: "Surrogate key generated from the ZIP code prefix using an MD5 hash."
-        tests:
+        data_tests:
           - not_null
           - unique  
           
       - name: zip_code_prefix
         description: "Brazilian ZIP code prefix used to identify the geographic area."
-        tests:
+        data_tests:
           - not_null
           - unique 
 
@@ -31,7 +31,7 @@ models:
         
       - name: Region
         description: "Brazilian geographic region derived from the state abbreviation."
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
               values:
@@ -50,13 +50,13 @@ models:
     columns:
       - name: date_key
         description: "Surrogate date key"
-        tests:
+        data_tests:
           - not_null
           - unique
       
       - name: date
         description: "Calendar date"
-        tests:
+        data_tests:
           - not_null
           - unique
 
@@ -112,18 +112,18 @@ models:
     columns:
       - name: customer_key
         description: "Surrogate key generated from customer_unique_id using an MD5 hash."
-        tests:
+        data_tests:
           - not_null
           - unique
 
       - name: customer_id
         description: "Olist customer identifier associated with the customer record for an order"
-        tests:
+        data_tests:
           - not_null
       
       - name: customer_unique_id
         description: "Persistent customer identifier used to identify a unique customer across multiple orders."
-        tests:
+        data_tests:
           - not_null
           - unique
 
@@ -139,15 +139,16 @@ models:
       - name: customer_first_order_date
         description: "Date of the customer's first recorded order."
         
-      # - name: geolocation_key
-      #   description: "Surrogate key generated from the customer's latest known ZIP code prefix and used to relate the customer to dim_geolocation."
-      #   tests:
-      #     - not_null   
-
+      - name: geolocation_key
+        description: "Foreign key to dim_geolocation based on the customer's latest known ZIP code prefix. NULL when no corresponding geolocation record exists.
+        data_tests:
+          - relationships:
+            arguments:
+              to: ref('dim_geolocation')
+              field: geolocation_key
   - name: fact_reviews
-    description: >
-      Fact table for order reviews. One row per review-order combination
-      (review_id + order_id), enriched with order and customer surrogate keys.
+    description: "Fact table for order reviews. One row per review-order combination
+      (review_id + order_id), enriched with order and customer surrogate keys."
     columns:
       - name: review_order_key
         description: "Surrogate key for the review-order combination, generated from review_id and order_id."
@@ -160,7 +161,7 @@ models:
 
       - name: order_key
         description: "Surrogate key generated from order_id."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('fact_orders')
@@ -168,7 +169,7 @@ models:
 
       - name: customer_key
         description: "Customer surrogate key joined through the order."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('dim_customer')
@@ -176,7 +177,7 @@ models:
 
       - name: review_date_key
         description: "Integer date key in YYYYMMDD format derived from review_creation_date."
-        data_tests:
+        data_data_tests:
           - relationships:
               arguments:
                 to: ref('dim_date')
@@ -304,7 +305,7 @@ models:
       - name: seller_id
         description: "Source seller identifier."
 
-      - name: seller_zip_code_prefix
+      - name: seller_zip_code_prefixrefix
         description: "Seller ZIP/postal-code prefix."
 
       - name: seller_city
@@ -314,15 +315,16 @@ models:
         description: "Seller state."
 
       - name: geolocation_key
-        description: "Surrogate geolocation key generated from seller_zip_code_prefix."
-        data_tests:
+        description: "Foreign key to dim_geolocation based on the seller ZIP code. NULL when no corresponding geolocation record exists."
+        data_data_tests
           - relationships:
               arguments:
                 to: ref('dim_geolocation')
                 field: geolocation_key
-
-  - name: fact_order_items
-    description: "Order-item fact table. One row per order item (order_id + order_item_id),
+                - name: geolocation_key
+  
+    - name: fact_order_items
+      description: "Order-item fact table. One row per order item (order_id + order_item_id),
       enriched with order, product, seller, and date surrogate keys."
     columns:
       - name: order_item_key

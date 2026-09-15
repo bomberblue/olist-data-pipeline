@@ -4,7 +4,7 @@
 
 SELECT
     to_hex(md5(cast(geolocation_zip_code_prefix AS string))) AS geolocation_key,
-    geolocation_zip_code_prefix as zip_code_prefix,
+    CAST(geolocation_zip_code_prefix AS STRING) as zip_code_prefix,
     latitude,
     longitude,
     city,

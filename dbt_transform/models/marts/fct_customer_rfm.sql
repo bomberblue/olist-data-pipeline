@@ -58,16 +58,16 @@ Monetary Scoring
 | **Frequency** | 1 order      | 2 orders | 3 orders | 4+ orders | —           |
 | **Monetary**  | Lowest 20%   | 20–40%   | 40–60%   | 60–80%    | Highest 20% |
 
-| Segment                 | Recency (R) | Frequency (F) | Monetary (M) | Customer Profile                                      | Suggested Action                       |
-| ----------------------- | ----------: | ------------: | -----------: | ----------------------------------------------------- | -------------------------------------- |
-| **Champions**           |         ≥ 4 |           ≥ 4 |          ≥ 4 | Recent, frequent, high-value customers                | Reward, VIP treatment, loyalty program |
-| **Loyal Customers**     |         ≥ 4 |           ≥ 3 |          Any | Frequent and active customers                         | Retention, cross-sell                  |
-| **Big Spenders**        |         ≥ 3 |           Any |          = 5 | High-value customers                                  | Premium offers, exclusive products     |
-| **New Customers**       |         ≥ 4 |           = 1 |          Any | Recent first-time buyers                              | Encourage second purchase              |
-| **Potential Loyalists** |         ≥ 4 |           2–3 |          Any | Recent repeat customers with growth potential         | Loyalty incentives                     |
-| **At Risk**             |         2–3 |           ≥ 3 |          Any | Previously engaged repeat customers becoming inactive | Win-back campaign                      |
-| **Needs Attention**     |         2–3 |           ≤ 2 |          Any | Low-frequency customers showing declining engagement  | Personalized promotion                 |
-| **Lost Customers**      |         = 1 |           Any |          Any | Long-inactive customers                               | Reactivation campaign                  |
+| Segment                           | Recency (R) | Frequency (F) | Monetary (M) | Customer Profile                                      | Suggested Action                       |
+| --------------------------------- | ----------: | ------------: | -----------: | ----------------------------------------------------- | -------------------------------------- |
+| **Champions**                     |         ≥ 4 |           ≥ 4 |          ≥ 4 | Recent, frequent, high-value customers                | Reward, VIP treatment, loyalty program |
+| **Loyal Customers**               |         ≥ 4 |           ≥ 3 |          Any | Frequent and active customers                         | Retention, cross-sell                  |
+| **Big Spenders**                  |         ≥ 3 |           Any |          = 5 | High-value customers                                  | Premium offers, exclusive products     |
+| **Recent One-Time Customers**     |         ≥ 4 |           = 1 |          Any | Recent first-time buyers                              | Encourage second purchase              |
+| **Potential Loyalists**           |         ≥ 4 |             2 |          Any | Recent repeat customers with growth potential         | Loyalty incentives                     |
+| **At Risk**                       |         2–3 |           ≥ 3 |          Any | Previously engaged repeat customers becoming inactive | Win-back campaign                      |
+| **Needs Attention**               |         2–3 |           ≤ 2 |          Any | Low-frequency customers showing declining engagement  | Personalized promotion                 |
+| **Lost Customers**                |         = 1 |           Any |          Any | Long-inactive customers                               | Reactivation campaign                  |
 
 
 */
