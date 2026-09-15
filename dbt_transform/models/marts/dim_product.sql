@@ -7,7 +7,11 @@ SELECT
     to_hex(md5(cast(product.product_id AS string))) AS product_key,
     product.product_id,
     product.product_category_name,
-    category_translation.product_category_name_english AS product_category_name_english,
+    COALESCE(
+        category_translation.product_category_name_english,
+        product.product_category_name,
+        'unknown'
+    ) AS product_category_name_english,
     product.product_name_length,
     product.product_description_length,
     product.product_photos_qty,
