@@ -8,4 +8,12 @@ logs/
 data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
+notebooks/analysis/output/
+notebooks/analysis/artifacts/
+.ipynb_checkpoints/
+**/.env
+notebooks/analysis/charts/
+output/*
+charts/*
+
  
