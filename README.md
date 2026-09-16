@@ -38,7 +38,14 @@ The whole pipeline is orchestrated by Dagster.
 │   └── dagster/              # Dagster assets and schedule
 └── notebooks/
     ├── olist_GX.ipynb           # interactive development copy of gx/scripts/validations.py
-    └── analysis/               # Jupyter notebooks
+    └── analysis/                  # Jupyter notebooks (owner: D)
+        └── .env                   # Environment variables (no keyfile path)
+        └── analysis.py            # Runs focused business analyses
+        └── config.py              # Configuration (OAuth based)
+        └── engine.py              # SQLAlchemy connection with OAuth
+        └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
+        └── check_csvs.py          # Validates generated analysis outputs
+        └── visualizations.py       # Generates business charts from outputs
 ```
 
 ## Setup
@@ -232,7 +239,6 @@ The REST API configuration in `meltano.yml` is:
 
 - meltano --env-file ../.env run tap-rest-api-msdk target-bigquery  # Extract the REST API data and load it into BigQuery.
 
-
 ### 8. Great Expectations validations
 
 The GX checks live under `gx/` (context config, generated suites/checkpoints) and `gx/scripts/validations.py` (the reusable validation logic). `notebooks/olist_GX.ipynb` is the interactive development copy of the same logic; `scripts/run_gx_validation_gx.py` is the CLI entrypoint an orchestrator (or you, locally) actually runs.
@@ -282,3 +288,24 @@ Environment variables (all optional; defaults shown):
 Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/data_docs/` on every run — open `gx/uncommitted/data_docs/local_site/index.html` locally to inspect results.
 
 Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
+
+### 9. Analysis setup.
+
+- Add a .env file under the notebooks/analysis folder with below details
+
+--GCP Configuration--
+
+PROJECT_ID=olist-data-pipeline-507001
+DATASET=olist_mart
+
+--Pandas Display Settings--
+
+PD_MAX_ROWS=100
+PD_MAX_COLUMNS=20
+
+--Analysis--
+
+RFM_TOP_CUSTOMERS_LIMIT=100
+OUTPUT_DIR=output
+
+- Run in the terminal "python analysis.py && python check_csvs.py && python visualizations.py"

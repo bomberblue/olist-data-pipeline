@@ -16,3 +16,10 @@ gx/validation_definitions/
 gx/checkpoints/
 gx/uncommitted/
 gx/great_expectations.yml
+
+notebooks/analysis/output/
+notebooks/analysis/artifacts/
+**/.env
+notebooks/analysis/charts/
+output/*
+charts/*
