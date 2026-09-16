@@ -242,11 +242,6 @@ The REST API configuration in `meltano.yml` is:
 PROJECT_ID=olist-data-pipeline-507001
 DATASET=olist_mart
 
---DuckDB Performance Settings--
-
-DUCKDB_MEMORY_LIMIT=4GB
-DUCKDB_THREADS=4
-
 --Pandas Display Settings--
 
 PD_MAX_ROWS=100

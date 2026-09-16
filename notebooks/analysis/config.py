@@ -20,17 +20,14 @@ def _required_env(name):
 PROJECT_ID = _required_env("PROJECT_ID")
 DATASET = _required_env("DATASET")
 
-BQ_LOCATION = os.getenv("BQ_LOCATION") or None
-
-DUCKDB_MEMORY_LIMIT = os.getenv("DUCKDB_MEMORY_LIMIT", "2GB")
-DUCKDB_THREADS = int(os.getenv("DUCKDB_THREADS", "4"))
-
 PD_MAX_ROWS = int(os.getenv("PD_MAX_ROWS", "100"))
 PD_MAX_COLUMNS = int(os.getenv("PD_MAX_COLUMNS", "30"))
 
 RFM_TOP_CUSTOMERS_LIMIT = int(os.getenv("RFM_TOP_CUSTOMERS_LIMIT", "100"))
 
 OUTPUT_DIR = BASE_DIR / os.getenv("OUTPUT_DIR", "output")
+
+CHART_DIR = BASE_DIR / os.getenv("CHART_DIR","charts",)
 
 
 MART_TABLES = (

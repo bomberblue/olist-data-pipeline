@@ -148,10 +148,23 @@ def monthly_sales_trend():
     sql = f"""
         WITH order_totals AS (
             SELECT
-                order_key,
-                SUM(price + freight_value) AS total_order_value
-            FROM `{PROJECT_ID}.{DATASET}.fact_order_items`
-            GROUP BY order_key
+                i.order_key,
+                SUM(i.price + i.freight_value) AS total_order_value
+
+            FROM `{PROJECT_ID}.{DATASET}.fact_order_items` AS i
+
+            JOIN `{PROJECT_ID}.{DATASET}.dim_date` AS od
+                ON i.order_date_key = od.date_key
+
+            WHERE
+                od.year = 2017
+                OR (
+                    od.year = 2018
+                    AND od.month <= 6
+                )
+
+            GROUP BY
+                i.order_key
         )
 
         SELECT
@@ -389,10 +402,23 @@ def holiday_impact():
     sql = f"""
         WITH order_totals AS (
             SELECT
-                order_key,
-                SUM(price + freight_value) AS total_order_value
-            FROM `{PROJECT_ID}.{DATASET}.fact_order_items`
-            GROUP BY order_key
+                i.order_key,
+                SUM(i.price + i.freight_value) AS total_order_value
+
+            FROM `{PROJECT_ID}.{DATASET}.fact_order_items` AS i
+
+            JOIN `{PROJECT_ID}.{DATASET}.dim_date` AS od
+                ON i.order_date_key = od.date_key
+
+            WHERE
+                od.year = 2017
+                OR (
+                    od.year = 2018
+                    AND od.month <= 6
+                )
+
+            GROUP BY
+                i.order_key
         )
 
         SELECT
@@ -467,10 +493,23 @@ def holiday_impact_by_quarter():
     sql = f"""
         WITH order_totals AS (
             SELECT
-                order_key,
-                SUM(price + freight_value) AS total_order_value
-            FROM `{PROJECT_ID}.{DATASET}.fact_order_items`
-            GROUP BY order_key
+                i.order_key,
+                SUM(i.price + i.freight_value) AS total_order_value
+
+            FROM `{PROJECT_ID}.{DATASET}.fact_order_items` AS i
+
+            JOIN `{PROJECT_ID}.{DATASET}.dim_date` AS od
+                ON i.order_date_key = od.date_key
+
+            WHERE
+                od.year = 2017
+                OR (
+                    od.year = 2018
+                    AND od.month <= 6
+                )
+
+            GROUP BY
+                i.order_key
         )
 
         SELECT
@@ -563,10 +602,23 @@ def holiday_daily_metrics_by_quarter():
     sql = f"""
         WITH order_totals AS (
             SELECT
-                order_key,
-                SUM(price + freight_value) AS total_order_value
-            FROM `{PROJECT_ID}.{DATASET}.fact_order_items`
-            GROUP BY order_key
+                i.order_key,
+                SUM(i.price + i.freight_value) AS total_order_value
+
+            FROM `{PROJECT_ID}.{DATASET}.fact_order_items` AS i
+
+            JOIN `{PROJECT_ID}.{DATASET}.dim_date` AS od
+                ON i.order_date_key = od.date_key
+
+            WHERE
+                od.year = 2017
+                OR (
+                    od.year = 2018
+                    AND od.month <= 6
+                )
+
+            GROUP BY
+                i.order_key
         ),
 
         orders_by_day AS (

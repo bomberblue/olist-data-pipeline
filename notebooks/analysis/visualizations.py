@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from config import OUTPUT_DIR
+from config import (OUTPUT_DIR,CHART_DIR,)
 
 
 logger = logging.getLogger(__name__)
@@ -44,12 +44,12 @@ def _read_csv(filename):
 
 
 def _save_figure(filename):
-    OUTPUT_DIR.mkdir(
+    CHART_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    path = OUTPUT_DIR / filename
+    path = CHART_DIR / filename
 
     plt.tight_layout()
 
@@ -664,7 +664,7 @@ def plot_holiday_product_category_mix():
 # ============================================================
 
 def generate_all_charts():
-    OUTPUT_DIR.mkdir(
+    CHART_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
@@ -682,7 +682,7 @@ def generate_all_charts():
     plot_holiday_product_category_mix()
 
     print(
-        f"Charts saved to: {OUTPUT_DIR}"
+        f"Charts saved to: {CHART_DIR}"
     )
 
 

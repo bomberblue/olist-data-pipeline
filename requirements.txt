@@ -14,7 +14,6 @@ sqlalchemy-bigquery==1.17.2
 google-cloud-bigquery==3.44.0
 db-dtypes==1.7.1
 pandas==3.0.5
-duckdb==1.5.5
 polars==1.44.1
 jupyter==1.1.1
 
