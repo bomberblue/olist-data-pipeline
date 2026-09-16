@@ -30,7 +30,16 @@ The whole pipeline is orchestrated by Dagster.
 ├── orchestration/
 │   └── dagster/              # Dagster assets and schedule (owner: E)
 └── notebooks/
-    └── analysis/               # Jupyter notebooks (owner: D)
+    └── analysis/                  # Jupyter notebooks (owner: D)
+        └── .env                   # Environment variables (no keyfile path)
+        └── analysis.py            # Runs focused business analyses
+        └── config.py              # Configuration (OAuth based)
+        └── duckdb_engine.py      # DuckDB connection via SQLAlchemy
+        └── engine.py              # SQLAlchemy connection with OAuth
+        └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
+        └── check_csvs.py          # Validates generated analysis outputs
+        └── visualizations.py       # Generates business charts from outputs
+        └── output.py              # Genereated outputs
 ```
 
 ## Setup
@@ -234,3 +243,24 @@ From `dbt_transform/` (profile set up per section 6):
 - `dbt test --select stg_orders` (or any model name) - scope to one model while iterating.
 
 Great Expectations checks (business plausibility/monitoring on top of these structural dbt tests) live on the `feat/gx-testing` branch and aren't merged into `main` yet.
+
+### 9. Analysis setup.
+
+- Add a .env file under the notebooks/analysis folder with below details
+
+--GCP Configuration--
+
+PROJECT_ID=olist-data-pipeline-507001
+DATASET=olist_mart
+
+--Pandas Display Settings--
+
+PD_MAX_ROWS=100
+PD_MAX_COLUMNS=20
+
+--Analysis--
+
+RFM_TOP_CUSTOMERS_LIMIT=100
+OUTPUT_DIR=output
+
+- Run in the terminal "python analysis.py && python check_csvs.py && python visualizations.py"

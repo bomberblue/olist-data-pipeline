@@ -9,4 +9,10 @@ data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
 dbt_transform/.user.yml
+notebooks/analysis/output/
+notebooks/analysis/artifacts/
+**/.env
+notebooks/analysis/charts/
+output/*
+charts/*
  
