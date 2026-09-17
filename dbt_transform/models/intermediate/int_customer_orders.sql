@@ -2,12 +2,17 @@
 
  SELECT
     *,
-    MIN(order_purchase_timestamp)
-    OVER (PARTITION BY customer_unique_id) AS first_order_timestamp,
-        ROW_NUMBER()
-    OVER (PARTITION BY customer_unique_id
-        ORDER BY order_purchase_timestamp, order_id) AS customer_order_number,
-    FROM 
+    MIN(
+        CASE WHEN is_qualifying_order THEN order_purchase_timestamp END
+    ) OVER (PARTITION BY customer_unique_id) AS first_order_timestamp,
+    CASE
+        WHEN is_qualifying_order
+            THEN ROW_NUMBER() OVER (
+                PARTITION BY customer_unique_id, is_qualifying_order
+                ORDER BY order_purchase_timestamp, order_id
+            )
+    END AS customer_order_number
+    FROM
     (
         SELECT
         orders.order_id,
@@ -15,6 +20,7 @@
         customers.customer_unique_id,
         orders.order_purchase_timestamp,
         orders.order_status,
+        orders.order_status NOT IN ('CANCELED', 'UNAVAILABLE') AS is_qualifying_order,
         customers.customer_zip_code_prefix,
         customers.customer_city,
         customers.customer_state

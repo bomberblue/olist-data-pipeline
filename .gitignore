@@ -8,6 +8,7 @@ logs/
 data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
+dbt_transform/.user.yml
 
 # these regenerate on every run, including fresh random ids with no
 # logical change
