@@ -50,6 +50,10 @@ final AS
         orders.order_delivered_carrier_date,
         orders.order_delivered_customer_date,
         orders.order_estimated_delivery_date,
+        CASE
+            WHEN UPPER(orders.order_status) IN ('CANCELED', 'UNAVAILABLE') THEN FALSE
+        ELSE TRUE
+        END AS is_qualifying_order,
         order_items.order_item_count,
         COALESCE(order_items.order_gmv, 0) AS order_gmv,
         order_items.total_freight_value,

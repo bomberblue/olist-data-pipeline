@@ -306,7 +306,7 @@ models:
       - name: seller_id
         description: "Source seller identifier."
 
-      - name: seller_zip_code_prefixrefix
+      - name: seller_zip_code_prefix
         description: "Seller ZIP/postal-code prefix."
 
       - name: seller_city

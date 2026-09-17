@@ -56,6 +56,7 @@ SELECT
     orders.review_count,
     orders.latest_review_date,
     orders.customer_type,
-    orders.first_order_timestamp
+    orders.first_order_timestamp,
+    orders.is_qualifying_order
 FROM orders
 LEFT JOIN customers ON orders.customer_unique_id = customers.customer_unique_id
