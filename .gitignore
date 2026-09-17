@@ -1,11 +1,19 @@
-.env
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-dbt_packages/
-target/
 logs/
 data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
- 
+
+# Great Expectations generated files
+gx/expectations/
+gx/validation_definitions/
+gx/checkpoints/
+gx/uncommitted/
+gx/great_expectations.yml
+
+# Analysis generated files
+notebooks/analysis/output/
+notebooks/analysis/artifacts/
+**/.env
+notebooks/analysis/charts/
+output/*
+charts/*
