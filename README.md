@@ -20,26 +20,32 @@ The whole pipeline is orchestrated by Dagster.
 ├── requirements.txt
 ├── .env.example          # copy to .env and fill in; .env itself is git-ignored
 ├── data/                  # the 9 Olist CSVs (git-ignored, not committed)
-├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config (owner: A)
+├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config
 ├── dbt_transform/
 │   ├── models/
-│   │   ├── staging/        # stg_* models (owner: B)
-│   │   └── marts/          # fact_*, dim_* models (owner: B)
+│   │   ├── staging/        # stg_* models
+│   │   └── marts/          # fact_*, dim_* models
 │   ├── macros/               # e.g. generate_schema_name override for marts dataset
-│   └── tests/               # dbt + Great Expectations suites (owner: C)
+│   └── tests/               # dbt + Great Expectations suites
+├── gx/
+│   ├── great_expectations.yml   # GX context config (tracked)
+│   ├── scripts/
+│   │   └── validations.py       # reusable GX validation logic
+│   └── uncommitted/              # generated suites/checkpoints/Data Docs (git-ignored)
+├── scripts/
+│   └── run_gx_validation_gx.py  # CLI entrypoint an orchestrator triggers
 ├── orchestration/
-│   └── dagster/              # Dagster assets and schedule (owner: E)
+│   └── dagster/              # Dagster assets and schedule
 └── notebooks/
+    ├── olist_GX.ipynb           # interactive development copy of gx/scripts/validations.py
     └── analysis/                  # Jupyter notebooks (owner: D)
         └── .env                   # Environment variables (no keyfile path)
         └── analysis.py            # Runs focused business analyses
         └── config.py              # Configuration (OAuth based)
-        └── duckdb_engine.py      # DuckDB connection via SQLAlchemy
         └── engine.py              # SQLAlchemy connection with OAuth
         └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
         └── check_csvs.py          # Validates generated analysis outputs
         └── visualizations.py       # Generates business charts from outputs
-        └── output.py              # Genereated outputs
 ```
 
 ## Setup
@@ -82,7 +88,7 @@ The loader in `meltano_ingestion/meltano.yml` references these variables. The in
 
 ### 4. Data
 
-Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
+Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step reads from here directly.
 
 
 ### 5. GCP authentication
@@ -242,9 +248,57 @@ From `dbt_transform/` (profile set up per section 6):
 - `dbt test --select test_type:singular` - run standalone tests, e.g. `assert_dim_customer_matches_unique_customer_count`, which checks `dim_customer` row count against `COUNT(DISTINCT customer_unique_id)` in `stg_customers` (a plain row-count match doesn't apply here since `dim_customer` collapses repeat customers).
 - `dbt test --select stg_orders` (or any model name) - scope to one model while iterating.
 
-Great Expectations checks (business plausibility/monitoring on top of these structural dbt tests) live on the `feat/gx-testing` branch and aren't merged into `main` yet.
+### 9. Great Expectations validations
 
-### 9. Analysis setup.
+The GX checks live under `gx/` (context config, generated suites/checkpoints) and `gx/scripts/validations.py` (the reusable validation logic). `notebooks/olist_GX.ipynb` is the interactive development copy of the same logic; `scripts/run_gx_validation_gx.py` is the CLI entrypoint an orchestrator (or you, locally) actually runs.
+
+#### Data quality testing strategy
+
+Test ownership is split between dbt and Great Expectations, not duplicated:
+
+- **dbt** owns deterministic warehouse correctness: primary/foreign keys, required fields, relationships, accepted values, model grain, join fanout, and reconciliation between staging and marts.
+- **Great Expectations** owns business plausibility and monitoring on raw/staging data: numeric ranges, timestamp sequences, completeness rates, geographic plausibility, and distribution drift over time — plus a lightweight mart sanity check (row count and a value-column sum vs. a baseline) as an independent smoke test that a mart loaded correctly end-to-end.
+
+Each GX check is one of two severities:
+
+- **Critical** — zero-tolerance structural issues (e.g. review scores outside 1-5, negative monetary values, invalid state/status codes). A `RuntimeError` blocks the pipeline by default; set `GX_RAISE_ON_CRITICAL_FAILURE=false` to opt out (e.g. local/dev iteration).
+- **Observation** — known or monitored imperfections that don't make the data unusable (e.g. a small percentage of missing approval timestamps, review comments). These are logged, not blocking.
+
+Known baseline anomalies in the raw Olist data — profiled directly from source, not defects introduced by the transform layer, and not something a passing/failing test should be surprised by:
+
+| Finding | Detail |
+|---|---|
+| Duplicate geolocation rows | 261,831 exact duplicate rows across 19,015 distinct ZIP prefixes in raw geolocation data — staging is a pass-through of the raw grain; dbt's `int_geolocation` model aggregates to one row per ZIP for the mart. |
+| Repeated `review_id` values | 814 rows — correct review grain is the compound key `(review_id, order_id)`, so `review_id` alone is not expected to be unique. |
+| Products missing category data | 623 rows use a category absent from the translation table; 610 rows are missing other descriptive fields. |
+| Orphaned ZIP references | 278 customer rows and 7 seller rows reference a ZIP prefix absent from geolocation data. |
+| Timestamp/payment inconsistencies | 166 carrier timestamps precede the purchase timestamp; 23 customer-delivery timestamps precede carrier delivery; 1,190 order payment totals differ from item price + freight by more than 1 cent. |
+
+These are tracked as observation-level checks (or excluded from a `unique`/`not_null` test where the anomaly makes one inapplicable), not treated as bugs to silently "fix" in the transform layer, unless the team agrees on an explicit exception rule.
+
+Run it from the repository root, with the `olist-pipeline` conda environment active:
+
+```bash
+GX_ENV=prod GX_DATA_LAYER=staging GX_RAISE_ON_CRITICAL_FAILURE=true python -m scripts.run_gx_validation_gx
+```
+
+Environment variables (all optional; defaults shown):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GX_ENV` | `dev` | `dev` / `staging` / `prod` — selects which dataset suffix to read. `prod` reads the bare dataset name (e.g. `olist_staging`); any other value reads `<dataset>_<env>` (e.g. `olist_staging_dev`). |
+| `GX_DATA_LAYER` | `staging` | `raw` or `staging` — which layer's tables to validate. |
+| `GX_SOURCE_MODE` | `bigquery` | `bigquery` or `csv`. `csv` reads the local files in `data/` instead of BigQuery, and only works with `GX_DATA_LAYER=raw`. |
+| `GX_CONTEXT_MODE` | `file` | `file` persists suites/checkpoints/Data Docs under `gx/`; `ephemeral` writes nothing to disk. |
+| `GX_RAISE_ON_CRITICAL_FAILURE` | `true` | Blocks by default: a critical check failure raises and exits non-zero. Set `false` to opt out (e.g. local/dev iteration). |
+| `GX_RAISE_ON_MART_FAILURE` | `false` | Set `true` to also block if any mart sanity check (row count / value-column sum, see `MART_SANITY_CHECKS` in `validations.py`) fails. |
+| `GOOGLE_CLOUD_PROJECT` | `olist-data-pipeline-507001` | Same variable as the root `.env` (step 3). |
+
+Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/data_docs/` on every run — open `gx/uncommitted/data_docs/local_site/index.html` locally to inspect results.
+
+Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
+
+### 10. Analysis setup.
 
 - Add a .env file under the notebooks/analysis folder with below details
 
