@@ -221,10 +221,19 @@ The REST API configuration in `meltano.yml` is:
         records_path: $[*]
         primary_keys: [date]
 
-
 - meltano --env-file ../.env run tap-rest-api-msdk target-bigquery  # Extract the REST API data and load it into BigQuery.
 
-### 8. Great Expectations validations
+### 8. Running dbt models and tests
+
+From `dbt_transform/` (profile set up per section 6):
+
+- `dbt run` - build all staging, intermediate, and mart models.
+- `dbt test` - run all schema tests (not_null, unique, relationships, accepted_values, compound-uniqueness, mart-to-staging row reconciliation) plus the unit tests below.
+- `dbt test --select test_type:unit` - run only the unit tests (fixture-based, no warehouse data needed): `int_orders` delivery/customer-type logic, `dim_product` category-fallback logic.
+- `dbt test --select test_type:singular` - run standalone tests, e.g. `assert_dim_customer_matches_unique_customer_count`, which checks `dim_customer` row count against `COUNT(DISTINCT customer_unique_id)` in `stg_customers` (a plain row-count match doesn't apply here since `dim_customer` collapses repeat customers).
+- `dbt test --select stg_orders` (or any model name) - scope to one model while iterating.
+
+### 9. Great Expectations validations
 
 The GX checks live under `gx/` (context config, generated suites/checkpoints) and `gx/scripts/validations.py` (the reusable validation logic). `notebooks/olist_GX.ipynb` is the interactive development copy of the same logic; `scripts/run_gx_validation_gx.py` is the CLI entrypoint an orchestrator (or you, locally) actually runs.
 
@@ -274,7 +283,7 @@ Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/dat
 
 Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
 
-### 9. Analysis setup.
+### 10. Analysis setup.
 
 - Add a .env file under the notebooks/analysis folder with below details
 

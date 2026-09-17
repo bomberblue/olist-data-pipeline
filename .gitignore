@@ -2,6 +2,7 @@ logs/
 data/*
 !data/.gitkeep
 dbt_transform/profiles.yml
+dbt_transform/.user.yml
 
 # Great Expectations generated files
 gx/expectations/
