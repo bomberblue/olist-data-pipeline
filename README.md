@@ -252,7 +252,7 @@ Test ownership is split between dbt and Great Expectations, not duplicated:
 
 Each GX check is one of two severities:
 
-- **Critical** — zero-tolerance structural issues (e.g. review scores outside 1-5, negative monetary values, invalid state/status codes). A `RuntimeError` blocks the pipeline when `GX_RAISE_ON_CRITICAL_FAILURE=true`.
+- **Critical** — zero-tolerance structural issues (e.g. review scores outside 1-5, negative monetary values, invalid state/status codes). A `RuntimeError` blocks the pipeline by default; set `GX_RAISE_ON_CRITICAL_FAILURE=false` to opt out (e.g. local/dev iteration).
 - **Observation** — known or monitored imperfections that don't make the data unusable (e.g. a small percentage of missing approval timestamps, review comments). These are logged, not blocking.
 
 Known baseline anomalies in the raw Olist data — profiled directly from source, not defects introduced by the transform layer, and not something a passing/failing test should be surprised by:
@@ -281,7 +281,7 @@ Environment variables (all optional; defaults shown):
 | `GX_DATA_LAYER` | `staging` | `raw` or `staging` — which layer's tables to validate. |
 | `GX_SOURCE_MODE` | `bigquery` | `bigquery` or `csv`. `csv` reads the local files in `data/` instead of BigQuery, and only works with `GX_DATA_LAYER=raw`. |
 | `GX_CONTEXT_MODE` | `file` | `file` persists suites/checkpoints/Data Docs under `gx/`; `ephemeral` writes nothing to disk. |
-| `GX_RAISE_ON_CRITICAL_FAILURE` | `false` | Set `true` to make a critical check failure exit non-zero. Required for a critical failure to actually block an orchestrator/CI run — without it the script always exits `0`. |
+| `GX_RAISE_ON_CRITICAL_FAILURE` | `true` | Blocks by default: a critical check failure raises and exits non-zero. Set `false` to opt out (e.g. local/dev iteration). |
 | `GX_RAISE_ON_MART_FAILURE` | `false` | Set `true` to also block if any mart sanity check (row count / value-column sum, see `MART_SANITY_CHECKS` in `validations.py`) fails. |
 | `GOOGLE_CLOUD_PROJECT` | `olist-data-pipeline-507001` | Same variable as the root `.env` (step 3). |
 

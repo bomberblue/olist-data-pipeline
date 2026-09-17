@@ -643,7 +643,7 @@ def run_gx_validations():
     critical_failures = summary[(summary["group"] == "critical") & (~summary["success"])]
     observation_failures = summary[(summary["group"] == "observation") & (~summary["success"])]
 
-    raise_on_critical_failure = os.getenv("GX_RAISE_ON_CRITICAL_FAILURE", "false").lower() == "true"
+    raise_on_critical_failure = os.getenv("GX_RAISE_ON_CRITICAL_FAILURE", "true").lower() == "true"
     if raise_on_critical_failure and not critical_failures.empty:
         raise RuntimeError("Critical GX checks failed. Review critical_failures and failed_details.")
 
