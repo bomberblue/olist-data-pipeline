@@ -3,6 +3,10 @@ name: Olist Data Pipeline
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   pipeline:
     runs-on: ubuntu-latest
@@ -11,8 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Python
-        run: python --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Confirm workflow
-        run: echo "GitHub Actions is working!"
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: test-olist-data-pipeline
+          workload_identity_provider: projects/807949064170/locations/global/workloadIdentityPools/github-actions/providers/github
