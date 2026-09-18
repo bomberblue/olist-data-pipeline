@@ -763,10 +763,6 @@ with customer_tab:
 
     rfm_df = get_rfm_data(engine)
    
-    unmatched = rfm_df["customer_unique_id"].isna().sum()
-    
-   
-
     segments = sorted(
         rfm_df["customer_segment"]
         .dropna()
