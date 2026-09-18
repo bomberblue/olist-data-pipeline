@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: olist
-    database: olist-data-pipeline-507001
+    database: "{{ env_var('DBT_GCP_PROJECT') }}"
     schema: olist_raw
 
     tables:
