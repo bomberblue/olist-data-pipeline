@@ -75,3 +75,5 @@ plugins:
       location: US
       denormalized: true
       threads: 1
+      upsert: true
+      overwrite: false
