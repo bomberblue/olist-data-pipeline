@@ -80,7 +80,6 @@ jobs:
           dbt test --target prod
 
       - name: Run Great Expectations
-        working-directory: gx
         env:
           GOOGLE_CLOUD_PROJECT: test-olist-data-pipeline
           GX_ENV: prod
