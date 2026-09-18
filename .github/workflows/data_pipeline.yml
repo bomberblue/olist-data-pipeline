@@ -70,6 +70,7 @@ jobs:
         env:
           DBT_GCP_PROJECT: test-olist-data-pipeline
         run: |
+          dbt deps
           dbt run --target prod
 
       - name: Test dbt
