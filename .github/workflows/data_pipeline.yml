@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  meltano_ingestion:
+  pipeline:
     runs-on: ubuntu-latest
 
     steps:
@@ -48,3 +48,44 @@ jobs:
           meltano install
           meltano run tap-csv target-bigquery
           meltano run tap-rest-api-msdk target-bigquery
+
+      - name: Create dbt profiles
+        working-directory: dbt_transform
+        run: |
+          cat > profiles.yml <<'EOF'
+          dbt_transform:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: oauth
+                project: test-olist-data-pipeline
+                dataset: olist_staging
+                location: US
+                threads: 4
+          EOF
+
+      - name: Run dbt
+        working-directory: dbt_transform
+        env:
+          DBT_GCP_PROJECT: test-olist-data-pipeline
+        run: |
+          dbt run --target prod
+
+      - name: Test dbt
+        working-directory: dbt_transform
+        env:
+          DBT_GCP_PROJECT: test-olist-data-pipeline
+        run: |
+          dbt test --target prod
+
+      - name: Run Great Expectations
+        env:
+          GOOGLE_CLOUD_PROJECT: test-olist-data-pipeline
+          GX_ENV: prod
+          GX_DATA_LAYER: staging
+          GX_SOURCE_MODE: bigquery
+          GX_RAISE_ON_CRITICAL_FAILURE: "true"
+          GX_RAISE_ON_MART_FAILURE: "true"
+        run: |
+          python -m scripts.run_gx_validation_gx
