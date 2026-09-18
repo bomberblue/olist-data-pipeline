@@ -9,8 +9,7 @@ This README covers setup and repo structure only.
 ```
 Kaggle CSVs -> Meltano -> BigQuery (raw) -> dbt (star schema) -> dbt tests + Great Expectations -> DuckDB/Polars + SQLAlchemy analysis
 ```
-
-The whole pipeline is orchestrated by Dagster.
+GitHub Actions orchestrates the entire data pipeline from data ingestion to data quality testing.
 
 ## Repository structure
 
@@ -20,17 +19,36 @@ The whole pipeline is orchestrated by Dagster.
 ├── requirements.txt
 ├── .env.example          # copy to .env and fill in; .env itself is git-ignored
 ├── data/                  # the 9 Olist CSVs (git-ignored, not committed)
-├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config (owner: A)
+├── meltano_ingestion/      # tap-csv, tap-rest-api-msdk -> target-bigquery config
 ├── dbt_transform/
 │   ├── models/
-│   │   ├── staging/        # stg_* models (owner: B)
-│   │   └── marts/          # fact_*, dim_* models (owner: B)
+│   │   ├── staging/        # stg_* models
+│   │   └── marts/          # fact_*, dim_* models
 │   ├── macros/               # e.g. generate_schema_name override for marts dataset
-│   └── tests/               # dbt + Great Expectations suites (owner: C)
-├── orchestration/
-│   └── dagster/              # Dagster assets and schedule (owner: E)
+│   └── tests/               # dbt + Great Expectations suites
+├── gx/
+│   ├── great_expectations.yml   # GX context config (git-ignored, generated locally)
+│   ├── scripts/
+│   │   └── validations.py       # reusable GX validation logic
+│   └── uncommitted/              # generated suites/checkpoints/Data Docs (git-ignored)
+├── .github/
+│   └── workflows/
+│       └── data_pipeline.yml    # GitHub Actions pipeline workflow
+├── scripts/
+│   └── run_gx_validation_gx.py  # CLI entrypoint run by the GitHub Actions workflow
 └── notebooks/
-    └── analysis/               # Jupyter notebooks (owner: D)
+    ├── 01_olist_eda.ipynb        # initial source-dataset exploration: table grain, structure
+    ├── 02_rfm_eda_analysis.ipynb # RFM scoring methodology and distribution analysis
+    ├── eda_finding.ipynb         # key/grain findings that informed the dbt model design
+    ├── olist_GX.ipynb           # interactive development copy of gx/scripts/validations.py
+    └── analysis/                  # Jupyter notebooks (owner: D)
+        └── .env                   # Environment variables (no keyfile path)
+        └── analysis.py            # Runs focused business analyses
+        └── config.py              # Configuration (OAuth based)
+        └── engine.py              # SQLAlchemy connection with OAuth
+        └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
+        └── check_csvs.py          # Validates generated analysis outputs
+        └── visualizations.py       # Generates business charts from outputs
 ```
 
 ## Setup
@@ -73,7 +91,7 @@ The loader in `meltano_ingestion/meltano.yml` references these variables. The in
 
 ### 4. Data
 
-Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step (owner: A) reads from here directly.
+Download the 9 Olist CSVs from Kaggle into `data/` (this folder is git-ignored). Only the Meltano ingestion step reads from here directly.
 
 
 ### 5. GCP authentication
@@ -283,7 +301,71 @@ Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/dat
 
 Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
 
-### 10. Analysis setup.
+### 10. GitHub Actions orchestration
+
+The complete data pipeline is orchestrated through a single GitHub Actions workflow: `.github/workflows/data_pipeline.yml`.
+
+The workflow connects the ingestion, transformation, testing, and data quality stages:
+
+```text
+Kaggle CSVs
+    ↓
+Meltano → BigQuery raw (`olist_raw`)
+    ↓
+dbt → staging / intermediate / marts
+    ↓
+dbt tests
+    ↓
+Great Expectations validations
+```
+
+The workflow runs the following stages in sequence:
+
+1. Checks out the repository and sets up the Python 3.11 environment.
+2. Authenticates to Google Cloud using GitHub Actions Workload Identity Federation.
+3. Downloads the Olist CSV files into the git-ignored `data/` directory.
+4. Runs Meltano to ingest the Olist CSVs and BrasilAPI holiday data into the BigQuery raw layer.
+5. Runs `dbt deps` to install the required dbt packages, followed by `dbt run` to build the staging, intermediate, and mart models.
+6. Runs `dbt test` to validate the transformed data.
+7. Runs Great Expectations to perform additional data quality validations.
+
+GitHub Actions provides the automation layer within the GitHub repository. It supports event-based and scheduled execution, dependency management between workflow steps, execution logs for monitoring, and workflow status and failure reporting. If a required step fails, the workflow is marked as failed and subsequent dependent steps do not proceed. The run logs can then be used to identify the failed stage and investigate the error.
+
+#### GitHub Actions triggers
+
+GitHub Actions supports different triggers depending on how a workflow should be executed. For example, scheduled execution can be configured using a cron schedule:
+
+```
+on:
+  schedule:
+    - cron: "0 0 * * *"
+```
+
+A workflow can also be configured to run automatically when code is pushed to the repository or when a pull request is opened or updated:
+
+```
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+```
+
+These triggers can be used to support continuous integration and continuous delivery (CI/CD), such as automatically testing code changes, validating the pipeline, or running scheduled data workflows.
+
+For this project, the workflow is currently configured with `workflow_dispatch`, allowing the complete data pipeline to be triggered manually from the GitHub Actions interface:
+
+```
+on:
+  workflow_dispatch:
+```
+
+### 11. Analysis setup.
+
+Requires the same GCP authentication as dbt (step 5) — `engine.py` connects with the same application-default credentials.
+
+The queried mart tables (`notebooks/analysis/config.py`): `dim_customer`, `dim_date`, `dim_geolocation`, `dim_product`, `dim_seller`, `fact_order_items`, `fact_orders`, `fact_payments`, `fact_reviews`, `fct_customer_rfm`.
 
 - Add a .env file under the notebooks/analysis folder with below details
 
@@ -301,5 +383,6 @@ PD_MAX_COLUMNS=20
 
 RFM_TOP_CUSTOMERS_LIMIT=100
 OUTPUT_DIR=output
+CHART_DIR=charts
 
 - Run in the terminal "python analysis.py && python check_csvs.py && python visualizations.py"
