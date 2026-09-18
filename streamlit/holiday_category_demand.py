@@ -1,17 +1,17 @@
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
 
-
-
-def get_holiday_category_changes(engine):
+@st.cache_data(ttl=3600)
+def get_holiday_category_changes(_engine):
     # Get holiday data from BigQuery
     holidays = pd.read_sql(
         """
         SELECT *
         FROM `olist-data-pipeline-507001.olist_staging.stg_holiday_calendar`
         """,
-        engine,
+        _engine,
     )
 
     holidays["hol_date"] = pd.to_datetime(
@@ -48,7 +48,7 @@ def get_holiday_category_changes(engine):
         JOIN `olist-data-pipeline-507001.olist_mart.dim_product` p
             ON oi.product_key = p.product_key
         """,
-        engine,
+        _engine,
     )
 
     category_sales["gmv"] = (
@@ -134,11 +134,13 @@ def get_holiday_category_changes(engine):
         all_holiday_results.append(result)
 
     # Combine all holidays
-    all_holiday_results_df = pd.concat(
-        all_holiday_results,
-        ignore_index=True,
-    )
+    if not all_holiday_results:
+        return pd.DataFrame()
 
+    all_holiday_results_df = pd.concat(
+    all_holiday_results,
+    ignore_index=True,
+)
     # Calculate daily sales
     all_holiday_results_df["Before_daily"] = (
         all_holiday_results_df["Before"] / 7
@@ -159,7 +161,7 @@ def get_holiday_category_changes(engine):
             all_holiday_results_df["Holiday_daily"]
             - all_holiday_results_df["Before_daily"]
         )
-        / all_holiday_results_df["Before_daily"]
+        / all_holiday_results_df["Before_daily"].replace(0,pd.NA)
     ) * 100
 
     all_holiday_results_df["holiday_change_value"] = (

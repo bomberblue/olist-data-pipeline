@@ -1,10 +1,11 @@
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
+@st.cache_data(ttl=3600)
+def get_category_sales(_engine, year):
 
-def get_category_sales_2017(engine):
-
-    query = """
+    query = f"""
     SELECT
       EXTRACT(MONTH FROM o.order_purchase_timestamp) AS month,
       p.product_category_name_english,
@@ -13,9 +14,9 @@ def get_category_sales_2017(engine):
     JOIN `olist-data-pipeline-507001.olist_mart.fact_orders` o
       ON oi.order_key = o.order_key
     JOIN `olist-data-pipeline-507001.olist_mart.dim_product` p
-      ON oi.product_id = p.product_id
+      ON oi.product_key = p.product_key
     WHERE o.order_status = 'DELIVERED'
-      AND EXTRACT(YEAR FROM o.order_purchase_timestamp) = 2017
+      AND EXTRACT(YEAR FROM o.order_purchase_timestamp) = {year}
     GROUP BY
       month,
       p.product_category_name_english
@@ -24,34 +25,10 @@ def get_category_sales_2017(engine):
       total_sales_value DESC
     """
 
-    return pd.read_sql(query, engine)
+    return pd.read_sql(query, _engine)
 
-
-def get_category_sales_2018(engine):
-    
-    query = """
-    SELECT
-      EXTRACT(MONTH FROM o.order_purchase_timestamp) AS month,
-      p.product_category_name_english,
-      SUM(oi.price + oi.freight_value) AS total_sales_value
-    FROM `olist-data-pipeline-507001.olist_mart.fact_order_items` oi
-    JOIN `olist-data-pipeline-507001.olist_mart.fact_orders` o
-      ON oi.order_key = o.order_key
-    JOIN `olist-data-pipeline-507001.olist_mart.dim_product` p
-      ON oi.product_id = p.product_id
-    WHERE o.order_status = 'DELIVERED'
-      AND EXTRACT(YEAR FROM o.order_purchase_timestamp) = 2018
-    GROUP BY
-      month,
-      p.product_category_name_english
-    ORDER BY
-      month,
-      total_sales_value DESC
-    """
-
-    return pd.read_sql(query, engine)
-
-def get_monthly_region_sales(engine):
+@st.cache_data(ttl=3600)
+def get_monthly_region_sales(_engine):
     query = """
     SELECT
       FORMAT_DATE(
@@ -75,7 +52,7 @@ def get_monthly_region_sales(engine):
       gmv DESC
     """
 
-    return pd.read_sql(query, engine)
+    return pd.read_sql(query,_engine)
 
 def add_brazil_region(df):
     region_map = {
@@ -260,14 +237,22 @@ def get_category_frequency_2018(df):
         .sort_values("top_10_months", ascending=False)
     )
 
-
 def get_category_summary_2018(revenue_df, frequency_df):
 
-    return revenue_df.merge(
+    summary = revenue_df.merge(
         frequency_df,
         on="product_category_name_english",
         how="left"
     )
+
+    summary["top_10_months"] = (
+        summary["top_10_months"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    return summary
+
 
 def get_2018_jan_june_category_revenue(df):
 

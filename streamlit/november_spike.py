@@ -1,8 +1,9 @@
 import pandas as pd
 from sqlalchemy import text
+import streamlit as st
 
-
-def get_order_vs_aov(engine):
+@st.cache_data(ttl=3600)
+def get_order_vs_aov(_engine):
     query = """
     WITH order_totals AS (
         SELECT
@@ -38,10 +39,10 @@ def get_order_vs_aov(engine):
     ORDER BY d.year, d.month
     """
 
-    return pd.read_sql(text(query), con=engine)
+    return pd.read_sql(text(query), con=_engine)
 
-
-def get_november_daily_activity(engine):
+@st.cache_data(ttl=3600)
+def get_november_daily_activity(_engine):
     query = """
     SELECT
         d.date_key,
@@ -62,10 +63,11 @@ def get_november_daily_activity(engine):
     ORDER BY d.date_key
     """
 
-    return pd.read_sql(text(query), con=engine)
+    return pd.read_sql(text(query), con=_engine)
 
 
-def get_category_spike(engine):
+@st.cache_data(ttl=3600)
+def get_category_spike(_engine):
     query = """
     WITH category_monthly AS (
         SELECT
@@ -160,4 +162,4 @@ def get_category_spike(engine):
     ORDER BY gmv_increase DESC
     """
 
-    return pd.read_sql(text(query), con=engine)
+    return pd.read_sql(text(query), con=_engine)

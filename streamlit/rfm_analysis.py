@@ -1,8 +1,9 @@
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 
-
-def get_rfm_data(engine):
+@st.cache_data(ttl=3600)
+def get_rfm_data(_engine):
     query = """
     SELECT
         r.customer_key,
@@ -22,7 +23,7 @@ def get_rfm_data(engine):
     ORDER BY r.monetary DESC
     """
 
-    return pd.read_sql(query, con=engine)
+    return pd.read_sql(query, con=_engine)
 
 
 def get_rfm_segment_summary(rfm_df):
@@ -32,7 +33,7 @@ def get_rfm_segment_summary(rfm_df):
         .groupby("customer_segment", as_index=False)
         .agg(
             total_revenue=("monetary_value", "sum"),
-            customer_count=("customer_unique_id", "nunique"),
+            customer_count=("customer_key", "nunique"),
             average_customer_value=("monetary_value", "mean"),
         )
         .sort_values("total_revenue", ascending=True)
@@ -47,6 +48,7 @@ def get_rfm_segment_summary(rfm_df):
     )
 
     return segment_df
+    
 
 
 def get_top_customers(

@@ -1,8 +1,9 @@
 import pandas as pd
 from sqlalchemy import text
+import streamlit as st
 
-
-def get_holiday_impact(engine):
+@st.cache_data(ttl=3600)
+def get_holiday_impact(_engine):
 
     
    
@@ -59,9 +60,10 @@ def get_holiday_impact(engine):
         ORDER BY gmv DESC
     """
 
-    return pd.read_sql(text(query), engine)
+    return pd.read_sql(text(query), _engine)
 
-def get_holiday_impact_by_quarter(engine):
+@st.cache_data(ttl=3600)
+def get_holiday_impact_by_quarter(_engine):
         query = """
         WITH order_totals AS (
             SELECT
@@ -132,9 +134,10 @@ def get_holiday_impact_by_quarter(engine):
             day_type
     """
 
-        return pd.read_sql(text(query), engine)
+        return pd.read_sql(text(query), _engine)
 
-def get_holiday_daily_metrics_by_quarter(engine):
+@st.cache_data(ttl=3600)
+def get_holiday_daily_metrics_by_quarter(_engine):
     query = """
         WITH order_totals AS (
             SELECT
@@ -239,8 +242,9 @@ def get_holiday_daily_metrics_by_quarter(engine):
             c.day_type
     """
 
-    return pd.read_sql(text(query), engine)
-def get_holiday_product_category_mix(engine, top_n=10):
+    return pd.read_sql(text(query),_engine)
+@st.cache_data(ttl=3600)
+def get_holiday_product_category_mix(_engine, top_n=10):
     query = f"""
         WITH category_sales AS (
             SELECT
@@ -344,7 +348,7 @@ def get_holiday_product_category_mix(engine, top_n=10):
             cs.day_type
     """
 
-    return pd.read_sql(text(query), engine)
+    return pd.read_sql(text(query),_engine)
 
 if __name__ == "__main__":
 
@@ -358,78 +362,6 @@ if __name__ == "__main__":
     df = get_holiday_product_category_mix(engine)
 
     print(df)
-
-#Black friday analysis
-
-def get_order_vs_aov(engine):
-    query = """
-    WITH order_totals AS (
-        SELECT
-            order_key,
-            SUM(price + freight_value) AS order_value
-        FROM `olist-data-pipeline-507001.olist_mart.fact_order_items`
-        GROUP BY order_key
-    )
-
-    SELECT
-        FORMAT('%04d-%02d', d.year, d.month) AS year_month,
-        COUNT(DISTINCT f.order_id) AS orders,
-        ROUND(SUM(ot.order_value), 2) AS gmv,
-        ROUND(
-            SAFE_DIVIDE(
-                SUM(ot.order_value),
-                COUNT(DISTINCT f.order_id)
-            ),
-            2
-        ) AS avg_order_value
-    FROM `olist-data-pipeline-507001.olist_mart.fact_orders` AS f
-
-    JOIN `olist-data-pipeline-507001.olist_mart.dim_date` AS d
-        ON f.order_date_key = d.date_key
-
-    LEFT JOIN order_totals AS ot
-        ON f.order_key = ot.order_key
-
-    WHERE d.year = 2017
-      AND d.month IN (10, 11, 12)
-
-    GROUP BY
-        d.year,
-        d.month
-
-    ORDER BY
-        d.year,
-        d.month
-    """
-
-    return pd.read_sql(text(query), con=engine)
-
-
-def get_november_daily_activity(engine):
-    query = """
-    SELECT
-        d.date_key,
-        COUNT(DISTINCT i.order_key) AS order_count,
-        ROUND(
-            SUM(i.price + i.freight_value),
-            2
-        ) AS gmv
-    FROM `olist-data-pipeline-507001.olist_mart.fact_order_items` AS i
-
-    JOIN `olist-data-pipeline-507001.olist_mart.dim_date` AS d
-        ON i.order_date_key = d.date_key
-
-    WHERE d.year = 2017
-      AND d.month = 11
-
-    GROUP BY
-        d.date_key
-
-    ORDER BY
-        d.date_key
-    """
-
-    return pd.read_sql(text(query), con=engine)
 
 
 

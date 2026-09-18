@@ -10,10 +10,7 @@ from holiday_category_demand import (
 
 
 from holiday_analysis import (
-    get_holiday_impact,
-    get_holiday_impact_by_quarter,
-    get_holiday_daily_metrics_by_quarter,
-    get_holiday_product_category_mix,
+    get_holiday_daily_metrics_by_quarter,  
 )
 
 
@@ -25,13 +22,12 @@ from november_spike import (
 
 
 from category_analysis import (
-    get_category_sales_2017,
+    get_category_sales,
     add_half_year,
     get_half_year_revenue,
     get_top_10_each_month,
     get_category_frequency,
     get_category_summary,
-    get_category_sales_2018,
     get_2018_category_revenue,
     get_top_10_each_month_2018,
     get_category_frequency_2018,
@@ -142,7 +138,7 @@ with category_tab:
     st.subheader("Revenue Drivers: Product Categories")
 
 
-    category_sales_2017_monthly = get_category_sales_2017(engine)
+    category_sales_2017_monthly = get_category_sales(engine, 2017)
 
 
     category_revenue_2017_jan_june = (
@@ -178,7 +174,7 @@ with category_tab:
     )
 
 
-    category_sales_2018_monthly = get_category_sales_2018(engine)
+    category_sales_2018_monthly = get_category_sales(engine, 2018)
 
     # Keep January-June 2018 for the comparison
 
@@ -269,11 +265,11 @@ with category_tab:
         in 2017 and generated relatively high total revenue.
 
         These three categories also maintained a strong Top 10 presence in
-        2018 (January-August) and were among the categories with the highest
+        2018 (January-June) and were among the categories with the highest
         total revenue.
 
         Comparing January-June 2017 with January-June 2018, they also recorded
-        some of the largest revenue increases. Gowth was concentrated in several major categories, 
+        some of the largest revenue increases. Growth was concentrated in several major categories, 
         while the largest declines were relatively small in absolute value
 
         Therefore, their combination of consistent Top 10 presence, high
@@ -398,72 +394,71 @@ with november_tab:
         order_vs_aov.set_index("year_month")["avg_order_value"]
     )
 
-
-    oct_row = order_vs_aov.loc[
+    oct_rows = order_vs_aov.loc[
         order_vs_aov["year_month"] == "2017-10"
-    ].iloc[0]
+    ]
 
-
-    nov_row = order_vs_aov.loc[
+    nov_rows = order_vs_aov.loc[
         order_vs_aov["year_month"] == "2017-11"
-    ].iloc[0]
+    ]
 
+    if not oct_rows.empty and not nov_rows.empty:
 
-    oct_to_nov_orders_pct = (
-        (nov_row["orders"] / oct_row["orders"]) - 1
-    ) * 100
+        oct_row = oct_rows.iloc[0]
 
+        nov_row = nov_rows.iloc[0]
 
-    oct_to_nov_gmv_pct = (
-        (nov_row["gmv"] / oct_row["gmv"]) - 1
-    ) * 100
+        oct_to_nov_orders_pct = (
+            (nov_row["orders"] / oct_row["orders"]) - 1
+        ) * 100
 
+        oct_to_nov_gmv_pct = (
+            (nov_row["gmv"] / oct_row["gmv"]) - 1
+        ) * 100
 
-    oct_to_nov_aov_pct = (
-        (nov_row["avg_order_value"] /
-         oct_row["avg_order_value"]) - 1
-    ) * 100
+        oct_to_nov_aov_pct = (
+            (nov_row["avg_order_value"] /
+             oct_row["avg_order_value"]) - 1
+        ) * 100
 
+        st.write("**October → November change**")
 
-    st.write("**October → November change**")
+        col1, col2, col3 = st.columns(3)
 
+        col1.metric(
+            "Order Growth",
+            f"{oct_to_nov_orders_pct:.1f}%",
+        )
 
-    col1, col2, col3 = st.columns(3)
+        col2.metric(
+            "GMV Growth",
+            f"{oct_to_nov_gmv_pct:.1f}%",
+        )
 
+        col3.metric(
+            "AOV Change",
+            f"{oct_to_nov_aov_pct:.1f}%",
+        )
 
-    col1.metric(
-        "Order Growth",
-        f"{oct_to_nov_orders_pct:.1f}%",
-    )
+        st.info(
+            """
+            **Insight:**
+             November 2017 was primarily volume-driven. Orders
+            increased sharply from October to November, while GMV also
+            increased strongly. Average Order Value decreased rather than
+            increased.
+            Therefore, the November spike was mainly associated with more
+            orders being placed, rather than customers spending more per
+            transaction.
+            """
+        )
 
+    else:
 
-    col2.metric(
-        "GMV Growth",
-        f"{oct_to_nov_gmv_pct:.1f}%",
-    )
-
-
-    col3.metric(
-        "AOV Change",
-        f"{oct_to_nov_aov_pct:.1f}%",
-    )
-
-
-    st.info(
-        """
-        **Insight:**
-
-         November 2017 was primarily volume-driven. Orders
-        increased sharply from October to November, while GMV also
-        increased strongly. Average Order Value decreased rather than
-        increased.
-
-        Therefore, the November spike was mainly associated with more
-        orders being placed, rather than customers spending more per
-        transaction.
-        """
-    )
-
+        st.warning(
+            "October or November 2017 data is unavailable, "
+            "so the October → November comparison cannot be calculated."
+        )
 
     # --------------------------------------------------------
     # DAILY ACTIVITY
@@ -482,55 +477,61 @@ with november_tab:
 
     nov_daily = get_november_daily_activity(engine)
 
-
     st.line_chart(
         nov_daily.set_index("date_key")["gmv"]
     )
 
 
-    peak = nov_daily.loc[
-        nov_daily["gmv"].idxmax()
-    ]
+    if not nov_daily.empty:
+
+        peak = nov_daily.loc[
+            nov_daily["gmv"].idxmax()
+        ]
 
 
-    st.write(
-        f"**Peak date:** {int(peak['date_key'])}"
-    )
+        st.write(
+            f"**Peak date:** {int(peak['date_key'])}"
+        )
 
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
 
-    col1.metric(
-        "Peak Orders",
-        f"{int(peak['order_count']):,}",
-    )
+        col1.metric(
+            "Peak Orders",
+            f"{int(peak['order_count']):,}",
+        )
 
 
-    col2.metric(
-        "Peak GMV",
-        f"{peak['gmv']:,.2f}",
-    )
+        col2.metric(
+            "Peak GMV",
+            f"{peak['gmv']:,.2f}",
+        )
 
 
-    st.info(
-        """
-        **Insight:**
+        st.info(
+            f"""
+            **Insight:**
 
-        The daily drill-down identifies **24 Nov 2017** as the dominant peak.
-        The increase is therefore not spread evenly throughout November; a
-        substantial part of the monthly increase is concentrated around a
-        short event period.
+            The daily drill-down identifies **{int(peak['date_key'])}** as the dominant peak.
+            The increase is therefore not spread evenly throughout November; a
+            substantial part of the monthly increase is concentrated around a
+            short event period.
 
-        This pattern is consistent with an event-driven shopping surge.
+            This pattern is consistent with an event-driven shopping surge.
 
-        The analysis demonstrates the event pattern from the transaction data;
-        causal attribution should be stated carefully unless external
-        promotional data is also introduced.
-        """
-    )
+            The analysis demonstrates the event pattern from the transaction data;
+            causal attribution should be stated carefully unless external
+            promotional data is also introduced.
+            """
+        )
 
+    else:
 
+        st.warning(
+            "No November daily data is available, so the peak cannot be calculated."
+        )
+    
     # --------------------------------------------------------
     # CATEGORY CONTRIBUTION
     # --------------------------------------------------------
