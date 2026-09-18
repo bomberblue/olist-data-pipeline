@@ -27,7 +27,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: test-olist-data-pipeline
+          project_id: olist-data-pipeline-507001
           workload_identity_provider: projects/807949064170/locations/global/workloadIdentityPools/github-actions/providers/github
 
       - name: Download Olist dataset
@@ -42,7 +42,7 @@ jobs:
       - name: Run Meltano ingestion
         working-directory: meltano_ingestion
         env:
-          GOOGLE_CLOUD_PROJECT: test-olist-data-pipeline
+          GOOGLE_CLOUD_PROJECT: olist-data-pipeline-507001
           BIGQUERY_DATASET: olist_raw
         run: |
           meltano install
@@ -59,7 +59,7 @@ jobs:
               prod:
                 type: bigquery
                 method: oauth
-                project: test-olist-data-pipeline
+                project: olist-data-pipeline-507001
                 dataset: olist_staging
                 location: US
                 threads: 4
@@ -68,7 +68,7 @@ jobs:
       - name: Run dbt
         working-directory: dbt_transform
         env:
-          DBT_GCP_PROJECT: test-olist-data-pipeline
+          DBT_GCP_PROJECT: olist-data-pipeline-507001
         run: |
           dbt deps
           dbt run --target prod
@@ -76,13 +76,13 @@ jobs:
       - name: Test dbt
         working-directory: dbt_transform
         env:
-          DBT_GCP_PROJECT: test-olist-data-pipeline
+          DBT_GCP_PROJECT: olist-data-pipeline-507001
         run: |
           dbt test --target prod
 
       - name: Run Great Expectations
         env:
-          GOOGLE_CLOUD_PROJECT: test-olist-data-pipeline
+          GOOGLE_CLOUD_PROJECT: olist-data-pipeline-507001
           GX_ENV: prod
           GX_DATA_LAYER: staging
           GX_SOURCE_MODE: bigquery
