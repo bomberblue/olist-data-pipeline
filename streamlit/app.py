@@ -273,7 +273,7 @@ with category_tab:
         total revenue.
 
         Comparing January-June 2017 with January-June 2018, they also recorded
-        some of the largest revenue increases.enue growth was concentrated in several major categories, 
+        some of the largest revenue increases. Gowth was concentrated in several major categories, 
         while the largest declines were relatively small in absolute value
 
         Therefore, their combination of consistent Top 10 presence, high
@@ -875,6 +875,8 @@ with customer_tab:
 
     st.subheader("Top Customers")
 
+    
+
 
     top_n = st.slider(
         "Number of customers",
@@ -929,6 +931,15 @@ with customer_tab:
         use_container_width=True
     )
 
+    st.subheader("RFM Score Guide")
+    
+    st.markdown("""
+    | Dimension     | Score 1       | Score 2    | Score 3   | Score 4      | Score 5      |
+    |---------------|---------------|------------|-----------|--------------|--------------|
+    | **Recency**   | Least recent  |            | Average   |              | Most recent  |
+    | **Frequency** | 1 order       | 2 orders   | 3 orders  | 4+ orders    | —            |
+    | **Monetary**  | Lowest 20%    | 20–40%     | 40–60%    | 60–80%       | Highest 20%  |
+    """)
 
     st.subheader("Customer Details")
 
