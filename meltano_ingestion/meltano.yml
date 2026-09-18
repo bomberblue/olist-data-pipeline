@@ -73,6 +73,7 @@ plugins:
       project: ${GOOGLE_CLOUD_PROJECT}
       dataset: ${BIGQUERY_DATASET}
       location: US
+      method: batch_job
       denormalized: true
       threads: 1
       upsert: true
