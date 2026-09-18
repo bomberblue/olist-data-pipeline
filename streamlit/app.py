@@ -273,7 +273,8 @@ with category_tab:
         total revenue.
 
         Comparing January-June 2017 with January-June 2018, they also recorded
-        some of the largest revenue increases.
+        some of the largest revenue increases.enue growth was concentrated in several major categories, 
+        while the largest declines were relatively small in absolute value
 
         Therefore, their combination of consistent Top 10 presence, high
         revenue contribution, and strong revenue growth identifies them as
