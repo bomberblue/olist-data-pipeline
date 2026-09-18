@@ -762,7 +762,10 @@ with customer_tab:
 
 
     rfm_df = get_rfm_data(engine)
-
+   
+    unmatched = rfm_df["customer_unique_id"].isna().sum()
+    
+   
 
     segments = sorted(
         rfm_df["customer_segment"]
@@ -784,7 +787,7 @@ with customer_tab:
 
 
     total_customers = (
-        filtered_rfm["customer_unique_id"].nunique()
+        filtered_rfm["customer_key"].nunique()
     )
 
 
