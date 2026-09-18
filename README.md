@@ -10,8 +10,6 @@ This README covers setup and repo structure only.
 Kaggle CSVs -> Meltano -> BigQuery (raw) -> dbt (star schema) -> dbt tests + Great Expectations -> DuckDB/Polars + SQLAlchemy analysis
 ```
 
-The whole pipeline is orchestrated by Dagster.
-
 ## Repository structure
 
 ```
@@ -28,15 +26,16 @@ The whole pipeline is orchestrated by Dagster.
 │   ├── macros/               # e.g. generate_schema_name override for marts dataset
 │   └── tests/               # dbt + Great Expectations suites
 ├── gx/
-│   ├── great_expectations.yml   # GX context config (tracked)
+│   ├── great_expectations.yml   # GX context config (git-ignored, generated locally)
 │   ├── scripts/
 │   │   └── validations.py       # reusable GX validation logic
 │   └── uncommitted/              # generated suites/checkpoints/Data Docs (git-ignored)
 ├── scripts/
 │   └── run_gx_validation_gx.py  # CLI entrypoint an orchestrator triggers
-├── orchestration/
-│   └── dagster/              # Dagster assets and schedule
 └── notebooks/
+    ├── 01_olist_eda.ipynb        # initial source-dataset exploration: table grain, structure
+    ├── 02_rfm_eda_analysis.ipynb # RFM scoring methodology and distribution analysis
+    ├── eda_finding.ipynb         # key/grain findings that informed the dbt model design
     ├── olist_GX.ipynb           # interactive development copy of gx/scripts/validations.py
     └── analysis/                  # Jupyter notebooks (owner: D)
         └── .env                   # Environment variables (no keyfile path)
@@ -300,6 +299,10 @@ Requires the same GCP authentication as dbt (step 5) — the script reads direct
 
 ### 10. Analysis setup.
 
+Requires the same GCP authentication as dbt (step 5) — `engine.py` connects with the same application-default credentials.
+
+The queried mart tables (`notebooks/analysis/config.py`): `dim_customer`, `dim_date`, `dim_geolocation`, `dim_product`, `dim_seller`, `fact_order_items`, `fact_orders`, `fact_payments`, `fact_reviews`, `fct_customer_rfm`.
+
 - Add a .env file under the notebooks/analysis folder with below details
 
 --GCP Configuration--
@@ -316,5 +319,6 @@ PD_MAX_COLUMNS=20
 
 RFM_TOP_CUSTOMERS_LIMIT=100
 OUTPUT_DIR=output
+CHART_DIR=charts
 
 - Run in the terminal "python analysis.py && python check_csvs.py && python visualizations.py"
