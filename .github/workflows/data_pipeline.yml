@@ -3,6 +3,10 @@ name: Olist Data Pipeline
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   pipeline:
     runs-on: ubuntu-latest
@@ -11,8 +15,78 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Python
-        run: python --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Confirm workflow
-        run: echo "GitHub Actions is working!"
+      - name: Install project requirements
+        run: |
+          pip install -r requirements.txt
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: olist-data-pipeline-507001
+          workload_identity_provider: projects/807949064170/locations/global/workloadIdentityPools/github-actions/providers/github
+
+      - name: Download Olist dataset
+        run: |
+          mkdir -p data
+          curl -L \
+            "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce" \
+            -o /tmp/olist.zip
+          unzip -o /tmp/olist.zip -d data
+          rm /tmp/olist.zip
+
+      - name: Run Meltano ingestion
+        working-directory: meltano_ingestion
+        env:
+          GOOGLE_CLOUD_PROJECT: olist-data-pipeline-507001
+          BIGQUERY_DATASET: olist_raw
+        run: |
+          meltano install
+          meltano run tap-csv target-bigquery
+          meltano run tap-rest-api-msdk target-bigquery
+
+      - name: Create dbt profiles
+        working-directory: dbt_transform
+        run: |
+          cat > profiles.yml <<'EOF'
+          dbt_transform:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: oauth
+                project: olist-data-pipeline-507001
+                dataset: olist_staging
+                location: US
+                threads: 4
+          EOF
+
+      - name: Run dbt
+        working-directory: dbt_transform
+        env:
+          DBT_GCP_PROJECT: olist-data-pipeline-507001
+        run: |
+          dbt deps
+          dbt run --target prod
+
+      - name: Test dbt
+        working-directory: dbt_transform
+        env:
+          DBT_GCP_PROJECT: olist-data-pipeline-507001
+        run: |
+          dbt test --target prod
+
+      - name: Run Great Expectations
+        env:
+          GOOGLE_CLOUD_PROJECT: olist-data-pipeline-507001
+          GX_ENV: prod
+          GX_DATA_LAYER: staging
+          GX_SOURCE_MODE: bigquery
+          GX_RAISE_ON_CRITICAL_FAILURE: "true"
+          GX_RAISE_ON_MART_FAILURE: "true"
+        run: |
+          python -m scripts.run_gx_validation_gx
