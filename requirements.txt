@@ -26,6 +26,8 @@ dagster-webserver==1.13.20
 
 #Visualization
 matplotlib==3.11.1
+streamlit
+plotly
 
 # Config / credentials
 python-dotenv==1.2.3
