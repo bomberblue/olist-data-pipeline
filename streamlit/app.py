@@ -762,7 +762,7 @@ with customer_tab:
 
 
     rfm_df = get_rfm_data(engine)
-   
+
     segments = sorted(
         rfm_df["customer_segment"]
         .dropna()
