@@ -329,6 +329,8 @@ The workflow runs the following stages in sequence:
 6. Runs `dbt test` to validate the transformed data.
 7. Runs Great Expectations to perform additional data quality validations.
 
+Step 3 calls the Kaggle API directly and needs Kaggle credentials, which the workflow doesn't set up yet. Add `KAGGLE_USERNAME` and `KAGGLE_KEY` as repo secrets and pass them to the `curl` call (`-u "$KAGGLE_USERNAME:$KAGGLE_KEY"`) before this step will run successfully.
+
 GitHub Actions provides the automation layer within the GitHub repository. It supports event-based and scheduled execution, dependency management between workflow steps, execution logs for monitoring, and workflow status and failure reporting. If a required step fails, the workflow is marked as failed and subsequent dependent steps do not proceed. The run logs can then be used to identify the failed stage and investigate the error.
 
 #### GitHub Actions triggers
