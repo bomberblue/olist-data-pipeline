@@ -9,6 +9,7 @@ This README covers setup and repo structure only.
 ```
 Kaggle CSVs -> Meltano -> BigQuery (raw) -> dbt (star schema) -> dbt tests + Great Expectations -> DuckDB/Polars + SQLAlchemy analysis
 ```
+GitHub Actions orchestrates the entire data pipeline from data ingestion to data quality testing.
 
 ## Repository structure
 
@@ -30,8 +31,11 @@ Kaggle CSVs -> Meltano -> BigQuery (raw) -> dbt (star schema) -> dbt tests + Gre
 │   ├── scripts/
 │   │   └── validations.py       # reusable GX validation logic
 │   └── uncommitted/              # generated suites/checkpoints/Data Docs (git-ignored)
+├── .github/
+│   └── workflows/
+│       └── data_pipeline.yml    # GitHub Actions pipeline workflow
 ├── scripts/
-│   └── run_gx_validation_gx.py  # CLI entrypoint an orchestrator triggers
+│   └── run_gx_validation_gx.py  # CLI entrypoint run by the GitHub Actions workflow
 └── notebooks/
     ├── 01_olist_eda.ipynb        # initial source-dataset exploration: table grain, structure
     ├── 02_rfm_eda_analysis.ipynb # RFM scoring methodology and distribution analysis
@@ -297,7 +301,67 @@ Data Docs (a browsable HTML validation report) refresh under `gx/uncommitted/dat
 
 Requires the same GCP authentication as dbt (step 5) — the script reads directly from BigQuery and does not set up its own credentials.
 
-### 10. Analysis setup.
+### 10. GitHub Actions orchestration
+
+The complete data pipeline is orchestrated through a single GitHub Actions workflow: `.github/workflows/data_pipeline.yml`.
+
+The workflow connects the ingestion, transformation, testing, and data quality stages:
+
+```text
+Kaggle CSVs
+    ↓
+Meltano → BigQuery raw (`olist_raw`)
+    ↓
+dbt → staging / intermediate / marts
+    ↓
+dbt tests
+    ↓
+Great Expectations validations
+```
+
+The workflow runs the following stages in sequence:
+
+1. Checks out the repository and sets up the Python 3.11 environment.
+2. Authenticates to Google Cloud using GitHub Actions Workload Identity Federation.
+3. Downloads the Olist CSV files into the git-ignored `data/` directory.
+4. Runs Meltano to ingest the Olist CSVs and BrasilAPI holiday data into the BigQuery raw layer.
+5. Runs `dbt deps` to install the required dbt packages, followed by `dbt run` to build the staging, intermediate, and mart models.
+6. Runs `dbt test` to validate the transformed data.
+7. Runs Great Expectations to perform additional data quality validations.
+
+GitHub Actions provides the automation layer within the GitHub repository. It supports event-based and scheduled execution, dependency management between workflow steps, execution logs for monitoring, and workflow status and failure reporting. If a required step fails, the workflow is marked as failed and subsequent dependent steps do not proceed. The run logs can then be used to identify the failed stage and investigate the error.
+
+#### GitHub Actions triggers
+
+GitHub Actions supports different triggers depending on how a workflow should be executed. For example, scheduled execution can be configured using a cron schedule:
+
+```
+on:
+  schedule:
+    - cron: "0 0 * * *"
+```
+
+A workflow can also be configured to run automatically when code is pushed to the repository or when a pull request is opened or updated:
+
+```
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+```
+
+These triggers can be used to support continuous integration and continuous delivery (CI/CD), such as automatically testing code changes, validating the pipeline, or running scheduled data workflows.
+
+For this project, the workflow is currently configured with `workflow_dispatch`, allowing the complete data pipeline to be triggered manually from the GitHub Actions interface:
+
+```
+on:
+  workflow_dispatch:
+```
+
+### 11. Analysis setup.
 
 Requires the same GCP authentication as dbt (step 5) — `engine.py` connects with the same application-default credentials.
 
