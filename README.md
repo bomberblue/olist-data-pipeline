@@ -49,6 +49,8 @@ GitHub Actions orchestrates the entire data pipeline from data ingestion to data
         └── queries.py             # Monthly Sales + Products + RFM + Holiday Impact
         └── check_csvs.py          # Validates generated analysis outputs
         └── visualizations.py       # Generates business charts from outputs
+        └── output/                   # CSV file generated to this folder
+        └── charts/                   # Charts generated to this folder
 ```
 
 ## Setup
